@@ -1,36 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
-	interface Character {
-		agility: number;
-		armour: number;
-		feats: string;
-		flaws: string;
-		hp: number;
-		inventory: number;
-		items: string[];
-		name: string;
-		presence: number;
-		strength: number;
-		toughness: number;
-	}
-
-	interface WarbandData {
-		warband: string;
-		characters: Character[];
-	}
+	import { calculateCharacterCost } from '$lib/utils';
+	import { type Character, type WarbandData } from '$lib/types';
+	import items from '$lib/items';
 
 	const STORAGE_KEY = 'warband_data';
 
+	let currentCharacterGold = 0;
+	let originalCharacterGold = 0;
+
 	let warbandData: WarbandData = {
 		warband: '',
-		characters: []
+		characters: [],
+		gold: 50
 	};
 
 	let selectedIndex: number = -1;
-
 	let showModal = false;
-
 	let editingWarbandName = false;
 	let tempWarbandName = '';
 
@@ -59,7 +45,7 @@
 					warbandData = loaded;
 				}
 			} catch {
-				console.error('Failed to load warband data from local storage');
+				console.error('Failed to load data from local storage');
 			}
 		}
 	});
@@ -74,11 +60,16 @@
 			currentCharacter.items = currentCharacter.items.slice(0, newVal);
 		}
 		currentCharacter.inventory = newVal;
+		recalculateCost();
 	};
 
 	const deleteItem = (index: number) => {
 		currentCharacter.items.splice(index, 1);
 		updateInventory(currentCharacter.items.length);
+	};
+
+	const recalculateCost = () => {
+		currentCharacterGold = calculateCharacterCost(currentCharacter, items);
 	};
 
 	const saveAll = () => {
@@ -87,13 +78,27 @@
 	};
 
 	const addOrUpdateCharacter = () => {
+		// recalculate the cost in case anything changed
+		recalculateCost();
+
+		// calc cost difference
+		const costDifference = originalCharacterGold - currentCharacterGold;
+
+		// adjust total gold based on difference
+		warbandData.gold += costDifference;
+
 		if (selectedIndex === -1) {
+			// new character
 			warbandData.characters = [...warbandData.characters, { ...currentCharacter }];
 		} else {
+			// existing character updated
 			warbandData.characters[selectedIndex] = { ...currentCharacter };
 			warbandData.characters = [...warbandData.characters];
 		}
 
+		// reset values
+		currentCharacterGold = 0;
+		originalCharacterGold = 0;
 		selectedIndex = -1;
 		currentCharacter = defaultCharacter();
 		showModal = false;
@@ -102,10 +107,32 @@
 	const editCharacter = (index: number) => {
 		selectedIndex = index;
 		currentCharacter = { ...warbandData.characters[index] };
+		recalculateCost();
+		// store the original gold cost before changes
+		originalCharacterGold = currentCharacterGold;
 		showModal = true;
 	};
 
 	const deleteCharacter = (index: number) => {
+		// calc how much gold items are worth
+		let characterCost = 0;
+		// select the character to delete
+		const characterToDelete = warbandData.characters[index];
+
+		// loop through the items and add up the gold to remove
+		for (const selectedItem of characterToDelete.items) {
+			if (selectedItem !== '') {
+				const found = items.find((i) => i.item === selectedItem);
+				if (found) {
+					characterCost += found.cost;
+				}
+			}
+		}
+
+		// add gold back to the warband's total gold
+		warbandData.gold += characterCost;
+
+		// remove the character
 		warbandData.characters.splice(index, 1);
 		warbandData.characters = [...warbandData.characters];
 
@@ -120,6 +147,8 @@
 	const openAddModal = () => {
 		selectedIndex = -1;
 		currentCharacter = defaultCharacter();
+		recalculateCost();
+		originalCharacterGold = 0;
 		showModal = true;
 	};
 
@@ -169,6 +198,7 @@
 				>
 			</div>
 		{/if}
+		<p>Gold: {warbandData.gold - currentCharacterGold}</p>
 	</div>
 
 	<h2 class="text-xl font-bold underline">Warband Characters</h2>
@@ -190,7 +220,16 @@
 						<p><strong>Items:</strong></p>
 						<ol class="list-decimal px-4">
 							{#each char.items as item}
-								<li>{item}</li>
+								<li>
+									{#each items as matchedItem (matchedItem.item)}
+										{#if matchedItem.item === item}
+											{matchedItem.item} ({matchedItem.cost} gold)
+										{/if}
+									{/each}
+									{#if !items.find((i) => i.item === item)}
+										{item} (Unknown cost)
+									{/if}
+								</li>
 							{/each}
 						</ol>
 					{/if}
@@ -219,9 +258,13 @@
 			class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
 			on:click={openAddModal}>Add Character</button
 		>
-		<button type="button" class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600" on:click={saveAll}
-			>Save All</button
+		<button
+			type="button"
+			class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
+			on:click={saveAll}
 		>
+			Save All
+		</button>
 	</div>
 </div>
 
@@ -239,7 +282,7 @@
 			</h2>
 			<form on:submit|preventDefault={addOrUpdateCharacter} class="space-y-4">
 				<div>
-					<label class="block font-bold">Name:</label>
+					<p class="block font-bold">Name:</p>
 					<input
 						type="text"
 						bind:value={currentCharacter.name}
@@ -249,7 +292,7 @@
 
 				<ol class="list-decimal">
 					<div>
-						<label class="block font-bold">Agility:</label>
+						<p class="block font-bold">Agility:</p>
 						<input
 							type="number"
 							min="-3"
@@ -260,7 +303,7 @@
 					</div>
 
 					<div>
-						<label class="block font-bold">Presence:</label>
+						<p class="block font-bold">Presence:</p>
 						<input
 							type="number"
 							bind:value={currentCharacter.presence}
@@ -269,7 +312,7 @@
 					</div>
 
 					<div>
-						<label class="block font-bold">Strength:</label>
+						<p class="block font-bold">Strength:</p>
 						<input
 							type="number"
 							bind:value={currentCharacter.strength}
@@ -278,7 +321,7 @@
 					</div>
 
 					<div>
-						<label class="block font-bold">Toughness:</label>
+						<p class="block font-bold">Toughness:</p>
 						<input
 							type="number"
 							bind:value={currentCharacter.toughness}
@@ -288,15 +331,16 @@
 				</ol>
 
 				<div>
-					<label class="block font-bold">Feats:</label>
+					<p class="block font-bold">Feats:</p>
 					<textarea
+						id="feats"
 						bind:value={currentCharacter.feats}
 						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
 					></textarea>
 				</div>
 
 				<div>
-					<label class="block font-bold">Flaws:</label>
+					<p class="block font-bold">Flaws:</p>
 					<textarea
 						bind:value={currentCharacter.flaws}
 						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
@@ -304,7 +348,7 @@
 				</div>
 
 				<div>
-					<label class="block font-bold">HP:</label>
+					<p class="block font-bold">HP:</p>
 					<input
 						type="number"
 						bind:value={currentCharacter.hp}
@@ -313,7 +357,7 @@
 				</div>
 
 				<div>
-					<label class="block font-bold">Armour:</label>
+					<p class="block font-bold">Armour:</p>
 					<input
 						type="number"
 						bind:value={currentCharacter.armour}
@@ -322,7 +366,7 @@
 				</div>
 
 				<div>
-					<label class="block font-bold">Inventory (number of slots):</label>
+					<p class="block font-bold">Inventory (number of slots):</p>
 					<input
 						type="number"
 						min="0"
@@ -337,24 +381,32 @@
 					<div class="space-y-2">
 						{#each currentCharacter.items as item, i}
 							<div class="flex items-center space-x-2">
-								<input
-									type="text"
-									bind:value={currentCharacter.items[i]}
+								<select
 									class="flex-1 rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
-								/>
+									bind:value={currentCharacter.items[i]}
+									on:change={recalculateCost}
+								>
+									<option value="">Select an item</option>
+									{#each items as option}
+										<option value={option.item}>{option.item} ({option.cost} Gold)</option>
+									{/each}
+								</select>
 								<button
 									type="button"
 									class="rounded bg-red-700 px-3 py-1 hover:bg-red-600"
-									on:click={() => deleteItem(i)}>Delete</button
+									on:click={() => {
+										deleteItem(i);
+										recalculateCost();
+									}}>Delete</button
 								>
 							</div>
 						{/each}
 					</div>
 				{/if}
 
-				<button type="submit" class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
-					>{selectedIndex === -1 ? 'Add Character' : 'Update Character'}</button
-				>
+				<button type="submit" class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600">
+					{selectedIndex === -1 ? 'Add Character' : 'Update Character'}
+				</button>
 			</form>
 		</div>
 	</div>
