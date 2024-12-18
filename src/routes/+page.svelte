@@ -10,7 +10,7 @@
 	let originalCharacterGold = 0;
 
 	let warbandData: WarbandData = {
-		warband: '',
+		warbandName: '',
 		characters: [],
 		gold: 50
 	};
@@ -37,12 +37,12 @@
 	let currentCharacter: Character = defaultCharacter();
 
 	onMount(() => {
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved) {
+		const savedData = localStorage.getItem(STORAGE_KEY);
+		if (savedData) {
 			try {
-				const loaded = JSON.parse(saved) as WarbandData;
-				if (loaded && typeof loaded === 'object' && Array.isArray(loaded.characters)) {
-					warbandData = loaded;
+				const loadedData = JSON.parse(savedData) as WarbandData;
+				if (loadedData && typeof loadedData === 'object' && Array.isArray(loadedData.characters)) {
+					warbandData = loadedData;
 				}
 			} catch {
 				console.error('Failed to load data from local storage');
@@ -53,9 +53,9 @@
 	const updateInventory = (newVal: number) => {
 		const currentLength = currentCharacter.items.length;
 		if (newVal > currentLength) {
-			for (let i = currentLength; i < newVal; i++) {
-				currentCharacter.items.push('');
-			}
+			currentCharacter.items = currentCharacter.items.concat(
+				Array(newVal - currentLength).fill('')
+			);
 		} else if (newVal < currentLength) {
 			currentCharacter.items = currentCharacter.items.slice(0, newVal);
 		}
@@ -144,7 +144,7 @@
 		}
 	};
 
-	const openAddModal = () => {
+	const addCharacter = () => {
 		selectedIndex = -1;
 		currentCharacter = defaultCharacter();
 		recalculateCost();
@@ -154,6 +154,7 @@
 
 	const closeModal = () => {
 		showModal = false;
+		// if a character was being edited, reset the values
 		if (selectedIndex !== -1) {
 			selectedIndex = -1;
 			currentCharacter = defaultCharacter();
@@ -161,12 +162,12 @@
 	};
 
 	const startEditingWarbandName = () => {
-		tempWarbandName = warbandData.warband;
+		tempWarbandName = warbandData.warbandName;
 		editingWarbandName = true;
 	};
 
 	const saveWarbandName = () => {
-		warbandData.warband = tempWarbandName;
+		warbandData.warbandName = tempWarbandName;
 		editingWarbandName = false;
 	};
 </script>
@@ -190,7 +191,7 @@
 		{:else}
 			<div class="flex items-center space-x-2">
 				<p>Warband Name:</p>
-				<span class="text-xl font-bold">{warbandData.warband || 'No Warband Name'}</span>
+				<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
 				<button
 					type="button"
 					class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
@@ -227,7 +228,7 @@
 										{/if}
 									{/each}
 									{#if !items.find((i) => i.item === item)}
-										{item} (Unknown cost)
+										Empty
 									{/if}
 								</li>
 							{/each}
@@ -256,7 +257,7 @@
 		<button
 			type="button"
 			class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
-			on:click={openAddModal}>Add Character</button
+			on:click={addCharacter}>Add Character</button
 		>
 		<button
 			type="button"
@@ -290,7 +291,7 @@
 					/>
 				</div>
 
-				<ol class="list-decimal">
+				<div class="grid grid-cols-2 gap-4">
 					<div>
 						<p class="block font-bold">Agility:</p>
 						<input
@@ -328,7 +329,7 @@
 							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
 						/>
 					</div>
-				</ol>
+				</div>
 
 				<div>
 					<p class="block font-bold">Feats:</p>

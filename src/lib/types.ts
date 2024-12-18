@@ -13,7 +13,7 @@ export interface Character {
 }
 
 export interface WarbandData {
-	warband: string;
+	warbandName: string;
 	characters: Character[];
 	gold: number;
 }
