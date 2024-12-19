@@ -78,25 +78,17 @@
 	};
 
 	const addOrUpdateCharacter = () => {
-		// recalculate the cost in case anything changed
 		recalculateCost();
-
-		// calc cost difference
 		const costDifference = originalCharacterGold - currentCharacterGold;
-
-		// adjust total gold based on difference
 		warbandData.gold += costDifference;
 
 		if (selectedIndex === -1) {
-			// new character
 			warbandData.characters = [...warbandData.characters, { ...currentCharacter }];
 		} else {
-			// existing character updated
 			warbandData.characters[selectedIndex] = { ...currentCharacter };
 			warbandData.characters = [...warbandData.characters];
 		}
 
-		// reset values
 		currentCharacterGold = 0;
 		originalCharacterGold = 0;
 		selectedIndex = -1;
@@ -108,18 +100,14 @@
 		selectedIndex = index;
 		currentCharacter = { ...warbandData.characters[index] };
 		recalculateCost();
-		// store the original gold cost before changes
 		originalCharacterGold = currentCharacterGold;
 		showModal = true;
 	};
 
 	const deleteCharacter = (index: number) => {
-		// calc how much gold items are worth
 		let characterCost = 0;
-		// select the character to delete
 		const characterToDelete = warbandData.characters[index];
 
-		// loop through the items and add up the gold to remove
 		for (const selectedItem of characterToDelete.items) {
 			if (selectedItem !== '') {
 				const found = items.find((i) => i.item === selectedItem);
@@ -129,10 +117,7 @@
 			}
 		}
 
-		// add gold back to the warband's total gold
 		warbandData.gold += characterCost;
-
-		// remove the character
 		warbandData.characters.splice(index, 1);
 		warbandData.characters = [...warbandData.characters];
 
@@ -154,7 +139,6 @@
 
 	const closeModal = () => {
 		showModal = false;
-		// if a character was being edited, reset the values
 		if (selectedIndex !== -1) {
 			selectedIndex = -1;
 			currentCharacter = defaultCharacter();
@@ -172,29 +156,35 @@
 	};
 </script>
 
-<div class="min-h-screen space-y-6 bg-black p-4 text-white">
-	<div class="flex items-center space-x-4">
+<div class="min-h-screen space-y-6 bg-black p-4 text-base text-white">
+	<div class="flex flex-col space-y-2 md:flex-row md:items-center md:space-x-4 md:space-y-0">
 		{#if editingWarbandName}
-			<div class="flex items-center space-x-2">
+			<div
+				class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
+			>
 				<p>Warband Name:</p>
 				<input
-					class="inline-input rounded border border-gray-700 bg-gray-900 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+					class="inline-input rounded border border-gray-700 bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 					type="text"
+					autocorrect="off"
+					autocapitalize="none"
 					bind:value={tempWarbandName}
 				/>
 				<button
 					type="button"
-					class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
+					class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 					on:click={saveWarbandName}>Done</button
 				>
 			</div>
 		{:else}
-			<div class="flex items-center space-x-2">
+			<div
+				class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
+			>
 				<p>Warband Name:</p>
 				<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
 				<button
 					type="button"
-					class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
+					class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 					on:click={startEditingWarbandName}>Edit</button
 				>
 			</div>
@@ -206,7 +196,7 @@
 	{#if warbandData.characters.length > 0}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
 			{#each warbandData.characters as char, i}
-				<div class="space-y-2 rounded bg-gray-900 p-4 shadow">
+				<div class="space-y-2 rounded bg-gray-900 p-4 text-sm shadow sm:text-base">
 					<h3 class="text-lg font-bold underline">{char.name || 'Unnamed Character'}</h3>
 					<p><strong>Agility:</strong> {char.agility}</p>
 					<p><strong>Presence:</strong> {char.presence}</p>
@@ -221,7 +211,7 @@
 						<p><strong>Items:</strong></p>
 						<ol class="list-decimal px-4">
 							{#each char.items as item}
-								<li>
+								<li class="py-1">
 									{#each items as matchedItem (matchedItem.item)}
 										{#if matchedItem.item === item}
 											{matchedItem.item} ({matchedItem.cost} gold)
@@ -237,12 +227,12 @@
 					<div class="space-x-2">
 						<button
 							type="button"
-							class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
+							class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 							on:click={() => editCharacter(i)}>Edit</button
 						>
 						<button
 							type="button"
-							class="rounded bg-red-700 px-3 py-1 hover:bg-red-600"
+							class="rounded bg-red-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 							on:click={() => deleteCharacter(i)}>Delete</button
 						>
 					</div>
@@ -256,26 +246,26 @@
 	<div class="space-x-2">
 		<button
 			type="button"
-			class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
+			class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 			on:click={addCharacter}>Add Character</button
 		>
 		<button
 			type="button"
-			class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600"
-			on:click={saveAll}
+			class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
+			on:click={saveAll}>Save All</button
 		>
-			Save All
-		</button>
 	</div>
 </div>
 
 {#if showModal}
+	<!-- Add -webkit-overflow-scrolling: touch for smooth scrolling -->
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 		<div
 			class="relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-gray-900 p-4 pr-6 text-white shadow"
+			style="-webkit-overflow-scrolling: touch;"
 		>
 			<button
-				class="absolute right-2 top-2 z-50 text-white hover:text-gray-300"
+				class="absolute right-2 top-2 z-50 text-white focus:outline-none focus:ring-2 focus:ring-white"
 				on:click={closeModal}>&times;</button
 			>
 			<h2 class="mb-4 text-xl font-bold">
@@ -286,8 +276,10 @@
 					<p class="block font-bold">Name:</p>
 					<input
 						type="text"
+						autocorrect="off"
+						autocapitalize="none"
 						bind:value={currentCharacter.name}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
 
@@ -297,10 +289,11 @@
 						<input
 							type="number"
 							inputmode="numeric"
+							pattern="[0-9]*"
 							min="-3"
 							max="3"
 							bind:value={currentCharacter.agility}
-							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 						/>
 					</div>
 
@@ -309,8 +302,9 @@
 						<input
 							type="number"
 							inputmode="numeric"
+							pattern="[0-9]*"
 							bind:value={currentCharacter.presence}
-							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 						/>
 					</div>
 
@@ -319,8 +313,9 @@
 						<input
 							type="number"
 							inputmode="numeric"
+							pattern="[0-9]*"
 							bind:value={currentCharacter.strength}
-							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 						/>
 					</div>
 
@@ -329,8 +324,9 @@
 						<input
 							type="number"
 							inputmode="numeric"
+							pattern="[0-9]*"
 							bind:value={currentCharacter.toughness}
-							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 						/>
 					</div>
 				</div>
@@ -340,7 +336,7 @@
 					<textarea
 						id="feats"
 						bind:value={currentCharacter.feats}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					></textarea>
 				</div>
 
@@ -348,7 +344,7 @@
 					<p class="block font-bold">Flaws:</p>
 					<textarea
 						bind:value={currentCharacter.flaws}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					></textarea>
 				</div>
 
@@ -356,8 +352,10 @@
 					<p class="block font-bold">HP:</p>
 					<input
 						type="number"
+						inputmode="numeric"
+						pattern="[0-9]*"
 						bind:value={currentCharacter.hp}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
 
@@ -365,8 +363,10 @@
 					<p class="block font-bold">Armour:</p>
 					<input
 						type="number"
+						inputmode="numeric"
+						pattern="[0-9]*"
 						bind:value={currentCharacter.armour}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
 
@@ -375,9 +375,11 @@
 					<input
 						type="number"
 						min="0"
-						on:change={(e) => updateInventory(parseInt((e.target as HTMLInputElement).value))}
+						inputmode="numeric"
+						pattern="[0-9]*"
+						on:input={(e) => updateInventory(parseInt((e.target as HTMLInputElement).value))}
 						bind:value={currentCharacter.inventory}
-						class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
 
@@ -387,21 +389,23 @@
 						{#each currentCharacter.items as item, i}
 							<div class="flex items-center space-x-2">
 								<select
-									class="flex-1 rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
+									class="flex-1 rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 									bind:value={currentCharacter.items[i]}
-									on:change={recalculateCost}
+									on:input={recalculateCost}
 								>
 									<option value="">Select an item</option>
 									{#each items as option}
 										<option
 											disabled={option.cost > warbandData.gold - currentCharacterGold}
-											value={option.item}>{option.item} ({option.cost} Gold)</option
+											value={option.item}
 										>
+											{option.item} ({option.cost} Gold)
+										</option>
 									{/each}
 								</select>
 								<button
 									type="button"
-									class="rounded bg-red-700 px-3 py-1 hover:bg-red-600"
+									class="rounded bg-red-700 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 									on:click={() => {
 										deleteItem(i);
 										recalculateCost();
@@ -412,7 +416,10 @@
 					</div>
 				{/if}
 
-				<button type="submit" class="rounded bg-gray-700 px-3 py-1 hover:bg-gray-600">
+				<button
+					type="submit"
+					class="rounded bg-gray-700 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+				>
 					{selectedIndex === -1 ? 'Add Character' : 'Update Character'}
 				</button>
 			</form>
