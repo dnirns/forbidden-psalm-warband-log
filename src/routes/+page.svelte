@@ -296,6 +296,7 @@
 						<p class="block font-bold">Agility:</p>
 						<input
 							type="number"
+							inputmode="numeric"
 							min="-3"
 							max="3"
 							bind:value={currentCharacter.agility}
@@ -307,6 +308,7 @@
 						<p class="block font-bold">Presence:</p>
 						<input
 							type="number"
+							inputmode="numeric"
 							bind:value={currentCharacter.presence}
 							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
 						/>
@@ -316,6 +318,7 @@
 						<p class="block font-bold">Strength:</p>
 						<input
 							type="number"
+							inputmode="numeric"
 							bind:value={currentCharacter.strength}
 							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
 						/>
@@ -325,6 +328,7 @@
 						<p class="block font-bold">Toughness:</p>
 						<input
 							type="number"
+							inputmode="numeric"
 							bind:value={currentCharacter.toughness}
 							class="w-full rounded border border-gray-700 bg-black px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white"
 						/>
@@ -389,7 +393,10 @@
 								>
 									<option value="">Select an item</option>
 									{#each items as option}
-										<option value={option.item}>{option.item} ({option.cost} Gold)</option>
+										<option
+											disabled={option.cost > warbandData.gold - currentCharacterGold}
+											value={option.item}>{option.item} ({option.cost} Gold)</option
+										>
 									{/each}
 								</select>
 								<button
