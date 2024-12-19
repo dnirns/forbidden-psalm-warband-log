@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { calculateCharacterCost } from '$lib/utils';
 	import { type Character, type WarbandData } from '$lib/types';
 	import items from '$lib/items';
+	import { stats, statValues } from '$lib/stats';
 
 	const STORAGE_KEY = 'warband_data';
 
@@ -19,6 +21,14 @@
 	let showModal = false;
 	let editingWarbandName = false;
 	let tempWarbandName = '';
+
+	let isMobile = false;
+
+	// check if the user is on a mobile device for different numerical input types
+	if (browser) {
+		const ua = navigator.userAgent.toLowerCase();
+		isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua);
+	}
 
 	const defaultCharacter = (): Character => ({
 		agility: 0,
@@ -78,17 +88,27 @@
 	};
 
 	const addOrUpdateCharacter = () => {
+		const hpValue = parseInt(currentCharacter.hp as unknown as string, 10) || 0;
+		const armourValue = parseInt(currentCharacter.armour as unknown as string, 10) || 0;
+
+		currentCharacter.hp = hpValue;
+		currentCharacter.armour = armourValue;
+
 		recalculateCost();
+
 		const costDifference = originalCharacterGold - currentCharacterGold;
+
 		warbandData.gold += costDifference;
 
 		if (selectedIndex === -1) {
+			// add a new character
 			warbandData.characters = [...warbandData.characters, { ...currentCharacter }];
 		} else {
+			// update an existing character
 			warbandData.characters[selectedIndex] = { ...currentCharacter };
 			warbandData.characters = [...warbandData.characters];
 		}
-
+		// reset state
 		currentCharacterGold = 0;
 		originalCharacterGold = 0;
 		selectedIndex = -1;
@@ -258,7 +278,6 @@
 </div>
 
 {#if showModal}
-	<!-- Add -webkit-overflow-scrolling: touch for smooth scrolling -->
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 		<div
 			class="relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-gray-900 p-4 pr-6 text-white shadow"
@@ -284,51 +303,19 @@
 				</div>
 
 				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<p class="block font-bold">Agility:</p>
-						<input
-							type="number"
-							inputmode="numeric"
-							pattern="[0-9]*"
-							min="-3"
-							max="3"
-							bind:value={currentCharacter.agility}
-							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
-						/>
-					</div>
-
-					<div>
-						<p class="block font-bold">Presence:</p>
-						<input
-							type="number"
-							inputmode="numeric"
-							pattern="[0-9]*"
-							bind:value={currentCharacter.presence}
-							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
-						/>
-					</div>
-
-					<div>
-						<p class="block font-bold">Strength:</p>
-						<input
-							type="number"
-							inputmode="numeric"
-							pattern="[0-9]*"
-							bind:value={currentCharacter.strength}
-							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
-						/>
-					</div>
-
-					<div>
-						<p class="block font-bold">Toughness:</p>
-						<input
-							type="number"
-							inputmode="numeric"
-							pattern="[0-9]*"
-							bind:value={currentCharacter.toughness}
-							class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
-						/>
-					</div>
+					{#each stats as stat}
+						<div>
+							<p class="block font-bold">{stat.label}:</p>
+							<select
+								bind:value={currentCharacter[stat.key as keyof Character]}
+								class="w-full rounded border border-gray-700 bg-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white"
+							>
+								{#each statValues as value}
+									<option {value}>{value}</option>
+								{/each}
+							</select>
+						</div>
+					{/each}
 				</div>
 
 				<div>
@@ -351,10 +338,12 @@
 				<div>
 					<p class="block font-bold">HP:</p>
 					<input
-						type="number"
+						type={isMobile ? 'text' : 'number'}
 						inputmode="numeric"
 						pattern="[0-9]*"
+						min="0"
 						bind:value={currentCharacter.hp}
+						placeholder="HP"
 						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
@@ -362,10 +351,12 @@
 				<div>
 					<p class="block font-bold">Armour:</p>
 					<input
-						type="number"
+						type={isMobile ? 'text' : 'number'}
 						inputmode="numeric"
 						pattern="[0-9]*"
+						min="0"
 						bind:value={currentCharacter.armour}
+						placeholder="Armour"
 						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
 					/>
 				</div>
@@ -373,10 +364,10 @@
 				<div>
 					<p class="block font-bold">Inventory (number of slots):</p>
 					<input
-						type="number"
-						min="0"
+						type={isMobile ? 'text' : 'number'}
 						inputmode="numeric"
 						pattern="[0-9]*"
+						min="0"
 						on:input={(e) => updateInventory(parseInt((e.target as HTMLInputElement).value))}
 						bind:value={currentCharacter.inventory}
 						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
