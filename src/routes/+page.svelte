@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { calculateCharacterCost } from '$lib/utils';
+	import {
+		isMobileUserAgent,
+		loadWarbandData,
+		debounceSave,
+		defaultCharacter,
+		calculateCharacterCost
+	} from '$lib/utils';
 	import { type Character, type WarbandData } from '$lib/types';
 	import items from '$lib/items';
-	import { stats, statValues } from '$lib/stats';
-
-	const STORAGE_KEY = 'warband_data';
+	import { stats, statValues, STORAGE_KEY } from '$lib/constants';
 
 	let currentCharacterGold = 0;
 	let originalCharacterGold = 0;
@@ -25,42 +29,16 @@
 	let initialLoadComplete = false;
 
 	if (browser) {
-		const ua = navigator.userAgent.toLowerCase();
-		isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua);
+		isMobile = isMobileUserAgent(navigator.userAgent);
 	}
-
-	const defaultCharacter = (): Character => ({
-		agility: 0,
-		armour: 0,
-		feats: '',
-		flaws: '',
-		hp: 0,
-		inventory: 0,
-		items: [],
-		name: '',
-		presence: 0,
-		strength: 0,
-		toughness: 0
-	});
 
 	let currentCharacter: Character = defaultCharacter();
 
 	onMount(() => {
 		if (browser) {
-			const savedData = localStorage.getItem(STORAGE_KEY);
-			if (savedData) {
-				try {
-					const loadedData = JSON.parse(savedData) as WarbandData;
-					if (
-						loadedData &&
-						typeof loadedData === 'object' &&
-						Array.isArray(loadedData.characters)
-					) {
-						warbandData = loadedData;
-					}
-				} catch {
-					console.error('Failed to load data from local storage');
-				}
+			const loadedData = loadWarbandData();
+			if (loadedData && typeof loadedData === 'object') {
+				warbandData = loadedData;
 			}
 			initialLoadComplete = true;
 		}
@@ -90,24 +68,8 @@
 	$: availableGoldBefore = warbandData.gold + originalCharacterGold;
 	$: availableGold = Math.max(0, availableGoldBefore - currentCharacterGold);
 
-	let saveTimeout: ReturnType<typeof setTimeout>;
-
-	const debounceSave = () => {
-		clearTimeout(saveTimeout);
-		saveTimeout = setTimeout(() => {
-			if (browser && initialLoadComplete) {
-				const savedData = localStorage.getItem(STORAGE_KEY);
-				const currentData = JSON.stringify(warbandData);
-				if (savedData !== currentData) {
-					localStorage.setItem(STORAGE_KEY, currentData);
-					console.log('Warband data saved!');
-				}
-			}
-		}, 500);
-	};
-
 	// automatically save to local storage when warbandData changes, with debounce
-	$: warbandData, debounceSave();
+	$: warbandData, debounceSave(STORAGE_KEY, warbandData, initialLoadComplete, browser);
 
 	const addOrUpdateCharacter = () => {
 		const hpValue = parseInt(currentCharacter.hp as unknown as string, 10) || 0;
@@ -297,7 +259,7 @@
 </div>
 
 {#if showModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+	<div class="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
 		<div
 			class="relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-white p-4 pr-6 text-black shadow"
 			style="-webkit-overflow-scrolling: touch;"
