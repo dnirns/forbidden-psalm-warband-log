@@ -1,4 +1,4 @@
-export interface Character {
+export type Character = {
 	agility: number;
 	armour: number;
 	feats: string;
@@ -10,10 +10,10 @@ export interface Character {
 	presence: number;
 	strength: number;
 	toughness: number;
-}
+};
 
-export interface WarbandData {
+export type WarbandData = {
 	warbandName: string;
 	characters: Character[];
 	gold: number;
-}
+};
