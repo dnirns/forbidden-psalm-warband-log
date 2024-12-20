@@ -21,10 +21,8 @@
 	let showModal = false;
 	let editingWarbandName = false;
 	let tempWarbandName = '';
-
 	let isMobile = false;
 
-	// check if the user is on a mobile device for different numerical input types
 	if (browser) {
 		const ua = navigator.userAgent.toLowerCase();
 		isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua);
@@ -70,7 +68,6 @@
 			currentCharacter.items = currentCharacter.items.slice(0, newVal);
 		}
 		currentCharacter.inventory = newVal;
-		recalculateCost();
 	};
 
 	const deleteItem = (index: number) => {
@@ -78,14 +75,31 @@
 		updateInventory(currentCharacter.items.length);
 	};
 
-	const recalculateCost = () => {
-		currentCharacterGold = calculateCharacterCost(currentCharacter, items);
+	// reactive cost calculations
+	$: currentCharacterGold = calculateCharacterCost(currentCharacter, items);
+
+	// immediate "affordability" checks, treat original gold as if restored when editing
+	$: availableGoldBefore = warbandData.gold + originalCharacterGold;
+	$: availableGold = Math.max(0, availableGoldBefore - currentCharacterGold);
+
+	let saveTimeout: ReturnType<typeof setTimeout>;
+
+	const debounceSave = () => {
+		clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(() => {
+			if (browser) {
+				const savedData = localStorage.getItem(STORAGE_KEY);
+				const currentData = JSON.stringify(warbandData);
+				if (savedData !== currentData) {
+					localStorage.setItem(STORAGE_KEY, currentData);
+					console.log('Warband data saved!');
+				}
+			}
+		}, 500);
 	};
 
-	const saveAll = () => {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(warbandData));
-		alert('Warband and characters saved!');
-	};
+	// automatically save to local storage when warbandData changes, with debounce
+	$: warbandData, debounceSave();
 
 	const addOrUpdateCharacter = () => {
 		const hpValue = parseInt(currentCharacter.hp as unknown as string, 10) || 0;
@@ -94,21 +108,19 @@
 		currentCharacter.hp = hpValue;
 		currentCharacter.armour = armourValue;
 
-		recalculateCost();
-
 		const costDifference = originalCharacterGold - currentCharacterGold;
-
 		warbandData.gold += costDifference;
+		if (warbandData.gold < 0) {
+			warbandData.gold = 0;
+		}
 
 		if (selectedIndex === -1) {
-			// add a new character
 			warbandData.characters = [...warbandData.characters, { ...currentCharacter }];
 		} else {
-			// update an existing character
 			warbandData.characters[selectedIndex] = { ...currentCharacter };
 			warbandData.characters = [...warbandData.characters];
 		}
-		// reset state
+
 		currentCharacterGold = 0;
 		originalCharacterGold = 0;
 		selectedIndex = -1;
@@ -119,15 +131,13 @@
 	const editCharacter = (index: number) => {
 		selectedIndex = index;
 		currentCharacter = { ...warbandData.characters[index] };
-		recalculateCost();
-		originalCharacterGold = currentCharacterGold;
+		originalCharacterGold = calculateCharacterCost(currentCharacter, items);
 		showModal = true;
 	};
 
 	const deleteCharacter = (index: number) => {
 		let characterCost = 0;
 		const characterToDelete = warbandData.characters[index];
-
 		for (const selectedItem of characterToDelete.items) {
 			if (selectedItem !== '') {
 				const found = items.find((i) => i.item === selectedItem);
@@ -136,7 +146,6 @@
 				}
 			}
 		}
-
 		warbandData.gold += characterCost;
 		warbandData.characters.splice(index, 1);
 		warbandData.characters = [...warbandData.characters];
@@ -152,7 +161,6 @@
 	const addCharacter = () => {
 		selectedIndex = -1;
 		currentCharacter = defaultCharacter();
-		recalculateCost();
 		originalCharacterGold = 0;
 		showModal = true;
 	};
@@ -209,7 +217,7 @@
 				>
 			</div>
 		{/if}
-		<p>Gold: {warbandData.gold - currentCharacterGold}</p>
+		<p>Gold: {availableGold}</p>
 	</div>
 
 	<h2 class="text-xl font-bold underline">Warband Characters</h2>
@@ -269,22 +277,17 @@
 			class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
 			on:click={addCharacter}>Add Character</button
 		>
-		<button
-			type="button"
-			class="rounded bg-gray-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
-			on:click={saveAll}>Save All</button
-		>
 	</div>
 </div>
 
 {#if showModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 		<div
-			class="relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-gray-900 p-4 pr-6 text-white shadow"
+			class="text:white relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-gray-900 p-4 pr-6 shadow"
 			style="-webkit-overflow-scrolling: touch;"
 		>
 			<button
-				class="absolute right-2 top-2 z-50 text-white focus:outline-none focus:ring-2 focus:ring-white"
+				class="text:white focus:ring:white absolute right-2 top-2 z-50 focus:outline-none focus:ring-2"
 				on:click={closeModal}>&times;</button
 			>
 			<h2 class="mb-4 text-xl font-bold">
@@ -298,7 +301,7 @@
 						autocorrect="off"
 						autocapitalize="none"
 						bind:value={currentCharacter.name}
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					/>
 				</div>
 
@@ -308,7 +311,7 @@
 							<p class="block font-bold">{stat.label}:</p>
 							<select
 								bind:value={currentCharacter[stat.key as keyof Character]}
-								class="w-full rounded border border-gray-700 bg-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white"
+								class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 focus:outline-none focus:ring-2"
 							>
 								{#each statValues as value}
 									<option {value}>{value}</option>
@@ -323,7 +326,7 @@
 					<textarea
 						id="feats"
 						bind:value={currentCharacter.feats}
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					></textarea>
 				</div>
 
@@ -331,7 +334,7 @@
 					<p class="block font-bold">Flaws:</p>
 					<textarea
 						bind:value={currentCharacter.flaws}
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					></textarea>
 				</div>
 
@@ -344,7 +347,7 @@
 						min="0"
 						bind:value={currentCharacter.hp}
 						placeholder="HP"
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					/>
 				</div>
 
@@ -357,7 +360,7 @@
 						min="0"
 						bind:value={currentCharacter.armour}
 						placeholder="Armour"
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					/>
 				</div>
 
@@ -370,7 +373,7 @@
 						min="0"
 						on:input={(e) => updateInventory(parseInt((e.target as HTMLInputElement).value))}
 						bind:value={currentCharacter.inventory}
-						class="w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+						class="focus:ring:white w-full rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 					/>
 				</div>
 
@@ -380,26 +383,21 @@
 						{#each currentCharacter.items as item, i}
 							<div class="flex items-center space-x-2">
 								<select
-									class="flex-1 rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+									class="focus:ring:white flex-1 rounded border border-gray-700 bg-black px-3 py-2 text-base focus:outline-none focus:ring-2"
 									bind:value={currentCharacter.items[i]}
-									on:input={recalculateCost}
 								>
 									<option value="">Select an item</option>
 									{#each items as option}
-										<option
-											disabled={option.cost > warbandData.gold - currentCharacterGold}
-											value={option.item}
-										>
+										<option disabled={option.cost > availableGold} value={option.item}>
 											{option.item} ({option.cost} Gold)
 										</option>
 									{/each}
 								</select>
 								<button
 									type="button"
-									class="rounded bg-red-700 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+									class="focus:ring:white rounded bg-red-700 px-4 py-2 text-base focus:outline-none focus:ring-2"
 									on:click={() => {
 										deleteItem(i);
-										recalculateCost();
 									}}>Delete</button
 								>
 							</div>
@@ -409,7 +407,7 @@
 
 				<button
 					type="submit"
-					class="rounded bg-gray-700 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-white"
+					class="focus:ring:white rounded bg-gray-700 px-4 py-2 text-base focus:outline-none focus:ring-2"
 				>
 					{selectedIndex === -1 ? 'Add Character' : 'Update Character'}
 				</button>
