@@ -190,6 +190,14 @@
 		warbandData.warbandName = tempWarbandName;
 		editingWarbandName = false;
 	};
+
+	const handleInventoryInput = (e: Event) => {
+		const value = (e.target as HTMLInputElement).value;
+		const parsedValue = parseInt(value, 10);
+		if (!isNaN(parsedValue)) {
+			updateInventory(parsedValue);
+		}
+	};
 </script>
 
 <div class="min-h-screen space-y-6 bg-white p-4 text-base text-black">
@@ -379,7 +387,7 @@
 						inputmode="numeric"
 						pattern="[0-9]*"
 						min="0"
-						on:input={(e) => updateInventory(parseInt((e.target as HTMLInputElement).value))}
+						on:input={handleInventoryInput}
 						bind:value={currentCharacter.inventory}
 						class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
 					/>
