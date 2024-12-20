@@ -397,9 +397,9 @@
 					<h3 class="font-bold text-black">Items:</h3>
 					<div class="space-y-2">
 						{#each currentCharacter.items as item, i}
-							<div class="flex items-center space-x-2">
+							<div class="flex items-center space-y-2 sm:space-x-2 sm:space-y-0">
 								<select
-									class="flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
+									class="w-full flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black sm:w-auto"
 									bind:value={currentCharacter.items[i]}
 								>
 									<option value="">Select an item</option>
@@ -411,7 +411,7 @@
 								</select>
 								<button
 									type="button"
-									class="rounded bg-red-300 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-black"
+									class="ml-2 rounded bg-red-300 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-black sm:ml-0"
 									on:click={() => {
 										deleteItem(i);
 									}}>Delete</button
