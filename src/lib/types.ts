@@ -1,8 +1,8 @@
 export type Character = {
 	agility: number;
 	armour: number;
-	feats: string;
-	flaws: string;
+	feats: string[];
+	flaws: string[];
 	hp: number;
 	inventory: number;
 	items: string[];

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
 	import { browser } from '$app/environment';
+
 	import {
 		isMobileUserAgent,
 		loadWarbandData,
@@ -11,6 +13,7 @@
 	import { type Character, type WarbandData } from '$lib/types';
 	import items from '$lib/items';
 	import { stats, statValues, STORAGE_KEY } from '$lib/constants';
+	import CharacterCard from '../components/CharacterCard.svelte';
 
 	let currentCharacterGold = 0;
 	let originalCharacterGold = 0;
@@ -33,6 +36,8 @@
 	}
 
 	let currentCharacter: Character = defaultCharacter();
+	let featText = '';
+	let flawText = '';
 
 	onMount(() => {
 		if (browser) {
@@ -61,14 +66,9 @@
 		updateInventory(currentCharacter.items.length);
 	};
 
-	// reactive cost calculations
 	$: currentCharacterGold = calculateCharacterCost(currentCharacter, items);
-
-	// immediate "affordability" checks, treat original gold as if restored when editing
 	$: availableGoldBefore = warbandData.gold + originalCharacterGold;
 	$: availableGold = Math.max(0, availableGoldBefore - currentCharacterGold);
-
-	// automatically save to local storage when warbandData changes, with debounce
 	$: warbandData, debounceSave(STORAGE_KEY, warbandData, initialLoadComplete, browser);
 
 	const addOrUpdateCharacter = () => {
@@ -80,6 +80,7 @@
 
 		const costDifference = originalCharacterGold - currentCharacterGold;
 		warbandData.gold += costDifference;
+
 		if (warbandData.gold < 0) {
 			warbandData.gold = 0;
 		}
@@ -160,6 +161,28 @@
 			updateInventory(parsedValue);
 		}
 	};
+
+	const addFeat = () => {
+		if (featText.trim()) {
+			currentCharacter.feats = [...currentCharacter.feats, featText.trim()];
+			featText = '';
+		}
+	};
+
+	const addFlaw = () => {
+		if (flawText.trim()) {
+			currentCharacter.flaws = [...currentCharacter.flaws, flawText.trim()];
+			flawText = '';
+		}
+	};
+
+	const removeFeat = (index: number) => {
+		currentCharacter.feats = currentCharacter.feats.filter((_, i) => i !== index);
+	};
+
+	const removeFlaw = (index: number) => {
+		currentCharacter.flaws = currentCharacter.flaws.filter((_, i) => i !== index);
+	};
 </script>
 
 <div class="min-h-screen space-y-6 bg-white p-4 text-base text-black">
@@ -202,47 +225,7 @@
 	{#if warbandData.characters.length > 0}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
 			{#each warbandData.characters as char, i}
-				<div class="space-y-2 rounded bg-gray-100 p-4 text-sm shadow sm:text-base">
-					<h3 class="text-lg font-bold underline">{char.name || 'Unnamed Character'}</h3>
-					<p><strong>Agility:</strong> {char.agility}</p>
-					<p><strong>Presence:</strong> {char.presence}</p>
-					<p><strong>Strength:</strong> {char.strength}</p>
-					<p><strong>Toughness:</strong> {char.toughness}</p>
-					<p><strong>Feats:</strong> {char.feats}</p>
-					<p><strong>Flaws:</strong> {char.flaws}</p>
-					<p><strong>HP:</strong> {char.hp}</p>
-					<p><strong>Armour:</strong> {char.armour}</p>
-					<p><strong>Inventory Slots:</strong> {char.inventory}</p>
-					{#if char.inventory > 0}
-						<p><strong>Items:</strong></p>
-						<ol class="list-decimal px-4">
-							{#each char.items as item}
-								<li class="py-1">
-									{#each items as matchedItem (matchedItem.item)}
-										{#if matchedItem.item === item}
-											{matchedItem.item} ({matchedItem.cost} gold)
-										{/if}
-									{/each}
-									{#if !items.find((i) => i.item === item)}
-										Empty
-									{/if}
-								</li>
-							{/each}
-						</ol>
-					{/if}
-					<div class="space-x-2">
-						<button
-							type="button"
-							class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-							on:click={() => editCharacter(i)}>Edit</button
-						>
-						<button
-							type="button"
-							class="rounded bg-red-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-							on:click={() => deleteCharacter(i)}>Delete</button
-						>
-					</div>
-				</div>
+				<CharacterCard {editCharacter} {deleteCharacter} {items} {char} {i} />
 			{/each}
 		</div>
 	{:else}
@@ -253,20 +236,26 @@
 		<button
 			type="button"
 			class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-			on:click={addCharacter}>Add Character</button
+			on:click={addCharacter}
+			aria-label="Add a new character">Add Character</button
 		>
 	</div>
 </div>
 
 {#if showModal}
-	<div class="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
+	<div
+		transition:fade
+		class="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50"
+	>
 		<div
+			transition:scale
 			class="relative max-h-[90vh] w-11/12 max-w-md overflow-auto rounded bg-white p-4 pr-6 text-black shadow"
 			style="-webkit-overflow-scrolling: touch;"
 		>
 			<button
 				class="absolute right-2 top-2 z-50 text-black focus:outline-none focus:ring-2 focus:ring-black"
-				on:click={closeModal}>&times;</button
+				on:click={closeModal}
+				aria-label="Close modal">&times;</button
 			>
 			<h2 class="mb-4 text-xl font-bold">
 				{selectedIndex === -1 ? 'Add Character' : 'Edit Character'}
@@ -301,19 +290,58 @@
 
 				<div>
 					<p class="block font-bold text-black">Feats:</p>
-					<textarea
-						id="feats"
-						bind:value={currentCharacter.feats}
-						class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
-					></textarea>
+
+					<input
+						bind:value={featText}
+						placeholder="Enter a flaw..."
+						class="w-full rounded border border-gray-300 px-3 py-2"
+					/>
+					<button
+						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60 focus:outline-none"
+						type="button"
+						on:click={addFeat}>Add Feat</button
+					>
+					<ul class="mb-2 space-y-2">
+						{#each currentCharacter.feats as feat, i}
+							<li>
+								{feat}
+								<button
+									type="button"
+									class="text-lg font-extrabold text-red-600 hover:opacity-60"
+									on:click={() => removeFeat(i)}
+									aria-label="Remove flaw">X</button
+								>
+							</li>
+						{/each}
+					</ul>
 				</div>
 
 				<div>
 					<p class="block font-bold text-black">Flaws:</p>
-					<textarea
-						bind:value={currentCharacter.flaws}
-						class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
-					></textarea>
+
+					<input
+						bind:value={flawText}
+						placeholder="Enter a flaw..."
+						class="w-full rounded border border-gray-300 px-3 py-2"
+					/>
+					<button
+						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60"
+						type="button"
+						on:click={addFlaw}>Add Flaw</button
+					>
+					<ul class="mb-2 space-y-2">
+						{#each currentCharacter.flaws as flaw, i}
+							<li>
+								{flaw}
+								<button
+									type="button"
+									class="text-lg font-extrabold text-red-600 hover:opacity-60"
+									on:click={() => removeFlaw(i)}
+									aria-label="Remove flaw">X</button
+								>
+							</li>
+						{/each}
+					</ul>
 				</div>
 
 				<div>

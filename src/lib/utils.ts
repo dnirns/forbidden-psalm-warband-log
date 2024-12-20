@@ -56,8 +56,8 @@ export const defaultCharacter = (): Character => {
 	return {
 		agility: 0,
 		armour: 0,
-		feats: '',
-		flaws: '',
+		feats: [],
+		flaws: [],
 		hp: 0,
 		inventory: 0,
 		items: [],
