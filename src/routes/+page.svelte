@@ -290,18 +290,7 @@
 
 				<div>
 					<p class="block font-bold text-black">Feats:</p>
-
-					<input
-						bind:value={featText}
-						placeholder="Enter a flaw..."
-						class="w-full rounded border border-gray-300 px-3 py-2"
-					/>
-					<button
-						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60 focus:outline-none"
-						type="button"
-						on:click={addFeat}>Add Feat</button
-					>
-					<ul class="mb-2 space-y-2">
+					<ul class="mb-2 ml-4 list-disc space-y-2">
 						{#each currentCharacter.feats as feat, i}
 							<li>
 								{feat}
@@ -314,22 +303,21 @@
 							</li>
 						{/each}
 					</ul>
-				</div>
-
-				<div>
-					<p class="block font-bold text-black">Flaws:</p>
-
 					<input
-						bind:value={flawText}
+						bind:value={featText}
 						placeholder="Enter a flaw..."
 						class="w-full rounded border border-gray-300 px-3 py-2"
 					/>
 					<button
-						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60"
+						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60 focus:outline-none"
 						type="button"
-						on:click={addFlaw}>Add Flaw</button
+						on:click={addFeat}>Add Feat</button
 					>
-					<ul class="mb-2 space-y-2">
+				</div>
+
+				<div>
+					<p class="block font-bold text-black">Flaws:</p>
+					<ul class="mb-2 ml-4 list-disc space-y-2">
 						{#each currentCharacter.flaws as flaw, i}
 							<li>
 								{flaw}
@@ -342,6 +330,17 @@
 							</li>
 						{/each}
 					</ul>
+
+					<input
+						bind:value={flawText}
+						placeholder="Enter a flaw..."
+						class="w-full rounded border border-gray-300 px-3 py-2"
+					/>
+					<button
+						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60"
+						type="button"
+						on:click={addFlaw}>Add Flaw</button
+					>
 				</div>
 
 				<div>

@@ -12,8 +12,8 @@
 	<p><strong>Presence:</strong> {char.presence}</p>
 	<p><strong>Strength:</strong> {char.strength}</p>
 	<p><strong>Toughness:</strong> {char.toughness}</p>
-	<p><strong>Feats:</strong> {char.feats}</p>
-	<p><strong>Flaws:</strong> {char.flaws}</p>
+	<p><strong>Feats:</strong> {char.feats.join(', ')}</p>
+	<p><strong>Flaws:</strong> {char.flaws.join(', ')}</p>
 	<p><strong>HP:</strong> {char.hp}</p>
 	<p><strong>Armour:</strong> {char.armour}</p>
 	<p><strong>Inventory Slots:</strong> {char.inventory}</p>
