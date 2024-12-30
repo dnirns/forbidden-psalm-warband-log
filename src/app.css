@@ -1,3 +1,15 @@
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
+
+.medievalsharp-regular {
+	font-family: 'MedievalSharp', serif;
+	font-weight: 400;
+	font-style: normal;
+}
+
+.cinzel {
+	font-family: 'Cinzel', serif;
+	font-optical-sizing: auto;
+	font-style: normal;
+}

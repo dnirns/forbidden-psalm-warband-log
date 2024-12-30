@@ -185,7 +185,9 @@
 	};
 </script>
 
-<div class="min-h-screen space-y-6 bg-white p-4 text-base text-black">
+<div
+	class="medievalsharp-regular text-whi min-h-screen space-y-6 bg-stone-800 p-4 text-base text-white"
+>
 	<div class="flex flex-col space-y-2 md:flex-row md:items-center md:space-x-4 md:space-y-0">
 		{#if editingWarbandName}
 			<div
@@ -213,7 +215,7 @@
 				<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
 				<button
 					type="button"
-					class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+					class="text-blackw text-blackfocus:ring-2 rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-black"
 					on:click={startEditingWarbandName}>Edit</button
 				>
 			</div>
@@ -235,7 +237,7 @@
 	<div class="space-x-2">
 		<button
 			type="button"
-			class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+			class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
 			on:click={addCharacter}
 			aria-label="Add a new character">Add Character</button
 		>
@@ -257,7 +259,7 @@
 				on:click={closeModal}
 				aria-label="Close modal">&times;</button
 			>
-			<h2 class="mb-4 text-xl font-bold">
+			<h2 class="t mb-4 text-xl font-bold">
 				{selectedIndex === -1 ? 'Add Character' : 'Edit Character'}
 			</h2>
 			<form on:submit|preventDefault={addOrUpdateCharacter} class="space-y-4">
