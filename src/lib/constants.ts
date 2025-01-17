@@ -7,4 +7,3 @@ export const stats = [
 	{ label: 'Toughness', key: 'toughness' }
 ];
 
-export const STORAGE_KEY = 'warband_data';

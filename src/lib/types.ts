@@ -17,3 +17,11 @@ export type WarbandData = {
 	characters: Character[];
 	gold: number;
 };
+
+export type CharacterManagement = {
+	currentCharacterGold: number;
+	originalCharacterGold: number;
+	selectedIndex: number;
+	currentCharacter: Character;
+	showModal: boolean;
+};

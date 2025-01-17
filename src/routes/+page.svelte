@@ -2,18 +2,25 @@
 	import { onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { browser } from '$app/environment';
+	import { auth } from '$lib/firebase';
+	import { onAuthStateChanged, type User } from 'firebase/auth';
+	import { isMobileUserAgent, defaultCharacter, calculateCharacterCost } from '$lib/utils';
+	import items from '$lib/items';
+	import { stats, statValues } from '$lib/constants';
 
 	import {
-		isMobileUserAgent,
-		loadWarbandData,
-		debounceSave,
-		defaultCharacter,
-		calculateCharacterCost
-	} from '$lib/utils';
-	import { type Character, type WarbandData } from '$lib/types';
-	import items from '$lib/items';
-	import { stats, statValues, STORAGE_KEY } from '$lib/constants';
+		signInWithGoogleService,
+		signOutService,
+		saveToFirestore,
+		loadUserData,
+		setupRealtimeListener
+	} from '$lib/firebaseServices';
+
 	import CharacterCard from '../components/CharacterCard.svelte';
+	import { type Character, type WarbandData } from '$lib/types';
+
+	let currentUser: User | null = null;
+	let loading = true;
 
 	let currentCharacterGold = 0;
 	let originalCharacterGold = 0;
@@ -29,7 +36,6 @@
 	let editingWarbandName = false;
 	let tempWarbandName = '';
 	let isMobile = false;
-	let initialLoadComplete = false;
 
 	if (browser) {
 		isMobile = isMobileUserAgent(navigator.userAgent);
@@ -39,15 +45,78 @@
 	let featText = '';
 	let flawText = '';
 
+	let unsubscribeFirestore: (() => void) | undefined;
+
 	onMount(() => {
 		if (browser) {
-			const loadedData = loadWarbandData();
-			if (loadedData && typeof loadedData === 'object') {
-				warbandData = loadedData;
-			}
-			initialLoadComplete = true;
+			const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+				currentUser = user;
+				loading = true;
+
+				if (user) {
+					try {
+						// Set up realtime listener for warband data
+						unsubscribeFirestore = await setupRealtimeListener(user, (data) => {
+							warbandData = data;
+							console.log('Realtime update received:', data);
+						});
+						// Initial data load
+						const initialData = await loadUserData(user);
+						if (initialData) {
+							warbandData = initialData;
+						}
+					} catch (error) {
+						console.error('Error setting up data sync:', error);
+					}
+				} else {
+					// Clean up listener when user signs out
+					if (unsubscribeFirestore) {
+						unsubscribeFirestore();
+						unsubscribeFirestore = undefined;
+					}
+					// Reset warband data
+					warbandData = {
+						warbandName: '',
+						characters: [],
+						gold: 50
+					};
+				}
+				loading = false;
+			});
+
+			// Cleanup on component destroy
+			return () => {
+				unsubscribeAuth();
+				if (unsubscribeFirestore) {
+					unsubscribeFirestore();
+				}
+			};
 		}
 	});
+
+	const handleSignInWithGoogle = async () => {
+		try {
+			const result = await signInWithGoogleService();
+			currentUser = result;
+			await loadUserData(currentUser);
+		} catch (error) {
+			console.error('Error signing in:', error);
+		}
+	};
+
+	const handleSignOut = async () => {
+		try {
+			await signOutService();
+			currentUser = null;
+			warbandData = {
+				warbandName: '',
+				characters: [],
+				gold: 50
+			};
+		} catch (error) {
+			console.error('Error signing out:', error);
+		}
+	};
 
 	const updateInventory = (newVal: number) => {
 		const currentLength = currentCharacter.items.length;
@@ -69,9 +138,8 @@
 	$: currentCharacterGold = calculateCharacterCost(currentCharacter, items);
 	$: availableGoldBefore = warbandData.gold + originalCharacterGold;
 	$: availableGold = Math.max(0, availableGoldBefore - currentCharacterGold);
-	$: warbandData, debounceSave(STORAGE_KEY, warbandData, initialLoadComplete, browser);
 
-	const addOrUpdateCharacter = () => {
+	const addOrUpdateCharacter = async () => {
 		const hpValue = parseInt(currentCharacter.hp as unknown as string, 10) || 0;
 		const armourValue = parseInt(currentCharacter.armour as unknown as string, 10) || 0;
 
@@ -92,11 +160,17 @@
 			warbandData.characters = [...warbandData.characters];
 		}
 
-		currentCharacterGold = 0;
-		originalCharacterGold = 0;
-		selectedIndex = -1;
-		currentCharacter = defaultCharacter();
-		showModal = false;
+		try {
+			await saveToFirestore(currentUser, warbandData);
+			currentCharacterGold = 0;
+			originalCharacterGold = 0;
+			selectedIndex = -1;
+			currentCharacter = defaultCharacter();
+			showModal = false;
+		} catch (error) {
+			alert('Failed to save changes. Please try again.');
+			console.error('Error saving character:', error);
+		}
 	};
 
 	const editCharacter = (index: number) => {
@@ -106,7 +180,7 @@
 		showModal = true;
 	};
 
-	const deleteCharacter = (index: number) => {
+	const deleteCharacter = async (index: number) => {
 		let characterCost = 0;
 		const characterToDelete = warbandData.characters[index];
 		for (const selectedItem of characterToDelete.items) {
@@ -121,11 +195,17 @@
 		warbandData.characters.splice(index, 1);
 		warbandData.characters = [...warbandData.characters];
 
-		if (selectedIndex === index) {
-			selectedIndex = -1;
-			currentCharacter = defaultCharacter();
-		} else if (selectedIndex > index) {
-			selectedIndex--;
+		try {
+			await saveToFirestore(currentUser, warbandData);
+			if (selectedIndex === index) {
+				selectedIndex = -1;
+				currentCharacter = defaultCharacter();
+			} else if (selectedIndex > index) {
+				selectedIndex--;
+			}
+		} catch (error) {
+			alert('Failed to delete character. Please try again.');
+			console.error('Error deleting character:', error);
 		}
 	};
 
@@ -148,10 +228,16 @@
 		tempWarbandName = warbandData.warbandName;
 		editingWarbandName = true;
 	};
-
-	const saveWarbandName = () => {
+	const saveWarbandName = async () => {
 		warbandData.warbandName = tempWarbandName;
 		editingWarbandName = false;
+
+		try {
+			await saveToFirestore(currentUser, warbandData);
+		} catch (error) {
+			alert('Failed to save warband name. Please try again.');
+			editingWarbandName = true; // Revert to editing state if save fails
+		}
 	};
 
 	const handleInventoryInput = (e: Event) => {
@@ -188,62 +274,93 @@
 <div
 	class="medievalsharp-regular text-whi min-h-screen space-y-6 bg-stone-800 p-4 text-base text-white"
 >
-	<div class="flex flex-col space-y-2 md:flex-row md:items-center md:space-x-4 md:space-y-0">
-		{#if editingWarbandName}
-			<div
-				class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
+	{#if loading}
+		<p>Loading...</p>
+	{:else if currentUser}
+		<!-- Sign out header -->
+		<div class="mb-4 flex items-center justify-between">
+			<p>Welcome, {currentUser.displayName}</p>
+			<button
+				class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+				on:click={handleSignOut}
 			>
-				<p>Warband Name:</p>
-				<input
-					class="inline-input rounded border border-gray-300 bg-white px-3 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
-					type="text"
-					autocorrect="off"
-					autocapitalize="none"
-					bind:value={tempWarbandName}
-				/>
-				<button
-					type="button"
-					class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-					on:click={saveWarbandName}>Done</button
+				Sign Out
+			</button>
+		</div>
+
+		<!-- Warband name and gold section -->
+		<div class="flex flex-col space-y-2 md:flex-row md:items-center md:space-x-4 md:space-y-0">
+			{#if editingWarbandName}
+				<div
+					class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
 				>
+					<p>Warband Name:</p>
+					<input
+						class="inline-input rounded border border-gray-300 bg-white px-3 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+						type="text"
+						bind:value={tempWarbandName}
+					/>
+					<button
+						type="button"
+						class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+						on:click={saveWarbandName}
+						>Done
+					</button>
+				</div>
+			{:else}
+				<div
+					class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
+				>
+					<p>Warband Name:</p>
+					<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
+					<button
+						type="button"
+						class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+						on:click={startEditingWarbandName}
+						>Edit
+					</button>
+				</div>
+			{/if}
+			<p>Gold: {availableGold}</p>
+		</div>
+
+		<!-- Characters section -->
+		<h2 class="text-xl font-bold underline">Warband Characters</h2>
+		{#if warbandData.characters.length > 0}
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+				{#each warbandData.characters as char, i}
+					<CharacterCard {editCharacter} {deleteCharacter} {items} {char} {i} />
+				{/each}
 			</div>
 		{:else}
-			<div
-				class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
-			>
-				<p>Warband Name:</p>
-				<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
-				<button
-					type="button"
-					class="text-blackw text-blackfocus:ring-2 rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-black"
-					on:click={startEditingWarbandName}>Edit</button
-				>
-			</div>
+			<p>No characters saved yet.</p>
 		{/if}
-		<p>Gold: {availableGold}</p>
-	</div>
 
-	<h2 class="text-xl font-bold underline">Warband Characters</h2>
-	{#if warbandData.characters.length > 0}
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-			{#each warbandData.characters as char, i}
-				<CharacterCard {editCharacter} {deleteCharacter} {items} {char} {i} />
-			{/each}
+		<!-- Add character button -->
+		<div class="space-x-2">
+			<button
+				type="button"
+				class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+				on:click={addCharacter}
+				aria-label="Add a new character"
+				>Add Character
+			</button>
 		</div>
 	{:else}
-		<p>No characters saved yet.</p>
+		<!-- Sign in with Google -->
+		<div class="flex min-h-screen flex-col items-center justify-center">
+			<h1 class="mb-4 text-2xl">Welcome to Forbidden Psalm Warband Builder</h1>
+			<button
+				class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+				on:click={handleSignInWithGoogle}
+			>
+				Sign in with Google
+			</button>
+		</div>
 	{/if}
-
-	<div class="space-x-2">
-		<button
-			type="button"
-			class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
-			on:click={addCharacter}
-			aria-label="Add a new character">Add Character</button
-		>
-	</div>
 </div>
 
+<!-- Edit / Create character modal -->
 {#if showModal}
 	<div
 		transition:fade
@@ -257,8 +374,9 @@
 			<button
 				class="absolute right-2 top-2 z-50 text-black focus:outline-none focus:ring-2 focus:ring-black"
 				on:click={closeModal}
-				aria-label="Close modal">&times;</button
-			>
+				aria-label="Close modal"
+				>&times;
+			</button>
 			<h2 class="t mb-4 text-xl font-bold">
 				{selectedIndex === -1 ? 'Add Character' : 'Edit Character'}
 			</h2>
@@ -267,8 +385,6 @@
 					<p class="block font-bold text-black">Name:</p>
 					<input
 						type="text"
-						autocorrect="off"
-						autocapitalize="none"
 						bind:value={currentCharacter.name}
 						class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
 					/>
@@ -300,21 +416,23 @@
 									type="button"
 									class="text-lg font-extrabold text-red-600 hover:opacity-60"
 									on:click={() => removeFeat(i)}
-									aria-label="Remove flaw">X</button
-								>
+									aria-label="Remove feat"
+									>X
+								</button>
 							</li>
 						{/each}
 					</ul>
 					<input
 						bind:value={featText}
-						placeholder="Enter a flaw..."
+						placeholder="Enter a feat..."
 						class="w-full rounded border border-gray-300 px-3 py-2"
 					/>
 					<button
 						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60 focus:outline-none"
 						type="button"
-						on:click={addFeat}>Add Feat</button
-					>
+						on:click={addFeat}
+						>Add Feat
+					</button>
 				</div>
 
 				<div>
@@ -327,8 +445,9 @@
 									type="button"
 									class="text-lg font-extrabold text-red-600 hover:opacity-60"
 									on:click={() => removeFlaw(i)}
-									aria-label="Remove flaw">X</button
-								>
+									aria-label="Remove flaw"
+									>X
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -341,8 +460,9 @@
 					<button
 						class="my-2 rounded bg-gray-300 px-4 py-2 text-sm hover:opacity-60"
 						type="button"
-						on:click={addFlaw}>Add Flaw</button
-					>
+						on:click={addFlaw}
+						>Add Flaw
+					</button>
 				</div>
 
 				<div>
@@ -405,8 +525,9 @@
 									class="ml-2 rounded bg-red-300 px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-black sm:ml-0"
 									on:click={() => {
 										deleteItem(i);
-									}}>Delete</button
-								>
+									}}
+									>Delete
+								</button>
 							</div>
 						{/each}
 					</div>
