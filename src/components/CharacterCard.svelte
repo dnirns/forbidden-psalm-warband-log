@@ -6,8 +6,8 @@
 	export let i;
 </script>
 
-<div class="space-y-2 rounded bg-gray-100 p-4 text-sm text-black shadow sm:text-base">
-	<h3 class="text-lg font-bold underline">{char.name || 'Unnamed Character'}</h3>
+<div class="space-y-2 rounded bg-gray-100 p-4 text-black shadow sm:text-lg">
+	<h3 class="text-xl font-bold underline">{char.name || 'Unnamed Character'}</h3>
 	<p><strong>Agility:</strong> {char.agility}</p>
 	<p><strong>Presence:</strong> {char.presence}</p>
 	<p><strong>Strength:</strong> {char.strength}</p>

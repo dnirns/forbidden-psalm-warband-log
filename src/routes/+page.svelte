@@ -272,7 +272,7 @@
 </script>
 
 <div
-	class="medievalsharp-regular text-whi min-h-screen space-y-6 bg-stone-800 p-4 text-base text-white"
+	class="jacquard-24-regular text-large min-h-screen space-y-6 bg-stone-800 p-4 text-3xl text-white"
 >
 	{#if loading}
 		<p>Loading...</p>
@@ -281,7 +281,7 @@
 		<div class="mb-4 flex items-center justify-between">
 			<p>Welcome, {currentUser.displayName}</p>
 			<button
-				class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+				class="rounded bg-gray-300 px-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
 				on:click={handleSignOut}
 			>
 				Sign Out
@@ -296,13 +296,13 @@
 				>
 					<p>Warband Name:</p>
 					<input
-						class="inline-input rounded border border-gray-300 bg-white px-3 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+						class="inline-input rounded border border-gray-300 bg-white px-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
 						type="text"
 						bind:value={tempWarbandName}
 					/>
 					<button
 						type="button"
-						class="rounded bg-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+						class="rounded bg-red-400 px-2 focus:outline-none focus:ring-2 focus:ring-black"
 						on:click={saveWarbandName}
 						>Done
 					</button>
@@ -312,10 +312,10 @@
 					class="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0"
 				>
 					<p>Warband Name:</p>
-					<span class="text-xl font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
+					<span class="font-bold">{warbandData.warbandName || 'No Warband Name'}</span>
 					<button
 						type="button"
-						class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
+						class="rounded bg-gray-300 px-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
 						on:click={startEditingWarbandName}
 						>Edit
 					</button>
@@ -325,7 +325,7 @@
 		</div>
 
 		<!-- Characters section -->
-		<h2 class="text-xl font-bold underline">Warband Characters</h2>
+		<h2 class="font-bold underline">Warband Characters</h2>
 		{#if warbandData.characters.length > 0}
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
 				{#each warbandData.characters as char, i}
