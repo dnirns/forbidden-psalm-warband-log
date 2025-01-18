@@ -271,9 +271,7 @@
 	};
 </script>
 
-<div
-	class="jacquard-24-regular text-large min-h-screen space-y-6 bg-stone-800 p-4 text-3xl text-white"
->
+<div class="space-y-6">
 	{#if loading}
 		<p>Loading...</p>
 	{:else if currentUser}
@@ -327,7 +325,7 @@
 		<!-- Characters section -->
 		<h2 class="font-bold underline">Warband Characters</h2>
 		{#if warbandData.characters.length > 0}
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 				{#each warbandData.characters as char, i}
 					<CharacterCard {editCharacter} {deleteCharacter} {items} {char} {i} />
 				{/each}
@@ -348,7 +346,7 @@
 		</div>
 	{:else}
 		<!-- Sign in with Google -->
-		<div class="flex min-h-screen flex-col items-center justify-center">
+		<div class="flex flex-col items-center justify-center">
 			<h1 class="mb-4 text-2xl">Welcome to Forbidden Psalm Warband Builder</h1>
 			<button
 				class="rounded bg-gray-300 px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-black"
