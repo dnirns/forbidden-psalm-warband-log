@@ -1,0 +1,43 @@
+<script lang="ts">
+  export let scale: number = 0.5;
+</script>
+
+<div class="flex items-center justify-center">
+  <div
+    class="skull font-mono whitespace-pre text-xs origin-center leading-none"
+    style="transform: scale({scale})"
+  >
+    <pre class="m-0 p-0">
+                     .ed"""" """$$$$be.
+                   -"           ^""**$$$e.
+                 ."                   '$$$c
+                /                      "4$$b
+               d  3                      $$$$
+               $  *                   .$$$$$$
+              .$  ^c           $$$$$e$$$$$$$$.
+              d$L  4.         4$$$$$$$$$$$$$$b
+              $$$$b ^ceeeee.  4$$ECL.F*$$$$$$$
+  e$""=.      $$$$P d$$$$F $ $$$$$$$$$- $$$$$$
+ z$$b. ^c     3$$$F "$$$$b   $"$$$$$$$  $$$$*"      .=""$c
+4$$$$L        $$P"  "$$b   .$ $$$$$...e$$        .=  e$$$.
+^*$$$$$c  %..   *c    ..    $$ 3$$$$$$$$$$eF     zP  d$$$$$
+  "**$$$ec   "   %ce""    $$$  $$$$$$$$$$*    .r" =$$$$P""
+        "*$b.  "c  *$e.    *** d$$$$$"L$$    .d"  e$$***"
+          ^*$$c ^$c $$$      4J$$$$$% $$$ .e*".eeP"
+             "$$$$$$"'$=e....$*$$**$cz$$" "..d$*"
+               "*$$$  *=%4.$ L L$ P3$$$F $$$P"
+                  "$   "%*ebJLzb$e$$$$$b $P"
+                    %..      4$$$$$$$$$$ "
+                     $$$e   z$$$$$$$$$$%
+                      "*$c  "$$$$$$$P"
+                       ."""*$$$$$$$$bc
+                    .-"    .$***$$$"""*e.
+                 .-"    .e$"     "*$c  ^*b.
+          .=*""""    .e$*"          "*bc  "*$e..
+        .$"        .z*"               ^*$e.   "*****e.
+        $$ee$c   .d"                     "*$.        3.
+        ^*$E")$..$"                         *   .ee==d%
+           $.d$$$*                           *  J$$$e*
+            """""                              "$$$"</pre>
+  </div>
+</div>

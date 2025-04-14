@@ -1,0 +1,14 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap');
+
+.jacquard-24-regular {
+	font-family: 'Jacquard 24', serif;
+	font-weight: 300;
+	font-style: normal;
+}
+
+.lora {
+	font-family: 'Lora', serif;
+}
