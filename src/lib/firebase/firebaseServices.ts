@@ -14,7 +14,31 @@ export const signOutService = async (): Promise<void> => {
 
 export const saveToFirestore = async (
 	currentUser: User | null,
-	warbandData: WarbandData
+	warbandData: {
+		warbandName: string;
+		characters: {
+			name: string;
+			ancestry: string;
+			background: string;
+			move: number;
+			fight: number;
+			shoot: number;
+			armour: number;
+			will: number;
+			health: number;
+			hp: number;
+			toughness: number;
+			items: string[];
+			feats: string[];
+			flaws: any[];
+			pickedUpItems: string[];
+			ammoTrackers: any[];
+			notes: string
+		}[];
+		gold: number;
+		xp: number;
+		notes: string
+	}
 ): Promise<void> => {
 	try {
 		if (!currentUser) {

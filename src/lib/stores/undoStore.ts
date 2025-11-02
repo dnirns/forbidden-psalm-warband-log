@@ -14,7 +14,7 @@ export type UndoAction = {
 
 const createUndoStore = () => {
 	const { subscribe, set, update } = writable<UndoAction | null>(null);
-	let timeoutId: NodeJS.Timeout;
+	let timeoutId: number;
 
 	return {
 		subscribe,
