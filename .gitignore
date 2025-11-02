@@ -24,3 +24,10 @@ vite.config.ts.timestamp-*
 
 # Coverage
 coverage
+
+
+#other
+
+.idea
+.vscode
+.svelte-kit
