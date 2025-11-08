@@ -23,4 +23,8 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test -- --no-file-parallelism --run
+        env:
+          PUBLIC_FIREBASE_API_KEY: ${{ secrets.PUBLIC_FIREBASE_API_KEY }}
+          PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.PUBLIC_FIREBASE_PROJECT_ID }}
+        run: npm run test:ci
