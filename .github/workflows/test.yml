@@ -23,4 +23,4 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test -- --no-parallel --run
+        run: npm test -- --no-file-parallelism --run
