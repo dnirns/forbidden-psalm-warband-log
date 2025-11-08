@@ -21,11 +21,15 @@ export default defineConfig({
 				'dist/',
 				'.svelte-kit/'
 			]
-		}
-	},
-	resolve: {
+		},
 		alias: {
 			$lib: '/src/lib'
 		}
+	},
+	resolve: {
+		conditions: ['browser']
+	},
+	ssr: {
+		noExternal: ['svelte']
 	}
 });
