@@ -42,7 +42,7 @@ describe('firebaseServices', () => {
 		flaws: any[];
 		pickedUpItems: any[];
 		ammoTrackers: any[];
-		notes: string
+		notes: string;
 	} = {
 		name: 'Test Character',
 		ancestry: 'human',
@@ -82,11 +82,11 @@ describe('firebaseServices', () => {
 			flaws: any[];
 			pickedUpItems: any[];
 			ammoTrackers: any[];
-			notes: string
+			notes: string;
 		}[];
 		gold: number;
 		xp: number;
-		notes: string
+		notes: string;
 	} = {
 		warbandName: 'Test Warband',
 		characters: [mockCharacter],
@@ -140,10 +140,13 @@ describe('firebaseServices', () => {
 
 			await saveToFirestore(mockUser, mockWarbandData);
 
-			expect(updateDoc).toHaveBeenCalledWith(mockDoc, expect.objectContaining({
-				warbandName: 'Test Warband',
-				updatedAt: expect.any(String)
-			}));
+			expect(updateDoc).toHaveBeenCalledWith(
+				mockDoc,
+				expect.objectContaining({
+					warbandName: 'Test Warband',
+					updatedAt: expect.any(String)
+				})
+			);
 		});
 
 		it('should create new document when none exists', async () => {
@@ -151,10 +154,13 @@ describe('firebaseServices', () => {
 
 			await saveToFirestore(mockUser, mockWarbandData);
 
-			expect(setDoc).toHaveBeenCalledWith(mockDoc, expect.objectContaining({
-				warbandName: 'Test Warband',
-				createdAt: expect.any(String)
-			}));
+			expect(setDoc).toHaveBeenCalledWith(
+				mockDoc,
+				expect.objectContaining({
+					warbandName: 'Test Warband',
+					createdAt: expect.any(String)
+				})
+			);
 		});
 
 		it('should process character arrays correctly', async () => {
@@ -171,13 +177,18 @@ describe('firebaseServices', () => {
 				characters: [characterWithData]
 			});
 
-			expect(setDoc).toHaveBeenCalledWith(mockDoc, expect.objectContaining({
-				characters: [expect.objectContaining({
-					items: ['sword'],
-					feats: ['tough'],
-					pickedUpItems: ['potion']
-				})]
-			}));
+			expect(setDoc).toHaveBeenCalledWith(
+				mockDoc,
+				expect.objectContaining({
+					characters: [
+						expect.objectContaining({
+							items: ['sword'],
+							feats: ['tough'],
+							pickedUpItems: ['potion']
+						})
+					]
+				})
+			);
 		});
 
 		it('should handle undefined arrays as empty arrays', async () => {
@@ -186,9 +197,12 @@ describe('firebaseServices', () => {
 
 			await saveToFirestore(mockUser, { ...mockWarbandData, characters: [character] });
 
-			expect(setDoc).toHaveBeenCalledWith(mockDoc, expect.objectContaining({
-				characters: [expect.objectContaining({ feats: [], flaws: [] })]
-			}));
+			expect(setDoc).toHaveBeenCalledWith(
+				mockDoc,
+				expect.objectContaining({
+					characters: [expect.objectContaining({ feats: [], flaws: [] })]
+				})
+			);
 		});
 
 		it('should throw error when Firestore operation fails', async () => {
@@ -258,11 +272,13 @@ describe('firebaseServices', () => {
 			(getDoc as Mock).mockResolvedValue({
 				exists: () => true,
 				data: () => ({
-					characters: [{
-						name: 'Legacy',
-						inventory: 3,
-						items: 'not-array'
-					}]
+					characters: [
+						{
+							name: 'Legacy',
+							inventory: 3,
+							items: 'not-array'
+						}
+					]
 				})
 			});
 
@@ -354,12 +370,14 @@ describe('firebaseServices', () => {
 
 			expect(callback).toHaveBeenCalledWith(
 				expect.objectContaining({
-					characters: [expect.objectContaining({
-						feats: [],
-						flaws: [],
-						pickedUpItems: [],
-						ammoTrackers: []
-					})]
+					characters: [
+						expect.objectContaining({
+							feats: [],
+							flaws: [],
+							pickedUpItems: [],
+							ammoTrackers: []
+						})
+					]
 				})
 			);
 		});
@@ -371,11 +389,13 @@ describe('firebaseServices', () => {
 				snapshotCallback({
 					exists: () => true,
 					data: () => ({
-						characters: [{
-							name: 'Legacy',
-							inventory: 3,
-							items: 'not-array'
-						}]
+						characters: [
+							{
+								name: 'Legacy',
+								inventory: 3,
+								items: 'not-array'
+							}
+						]
 					})
 				});
 				return mockUnsubscribe;

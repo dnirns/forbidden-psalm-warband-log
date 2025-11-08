@@ -16,9 +16,7 @@ describe('modalUtils', () => {
 			value: 0
 		});
 
-
 		window.scrollTo = vi.fn();
-
 
 		global.requestAnimationFrame = vi.fn((callback) => {
 			callback(0);

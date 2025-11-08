@@ -1,13 +1,13 @@
 <script lang="ts">
-  export let scale: number = 0.5;
+	export let scale: number = 0.5;
 </script>
 
 <div class="flex items-center justify-center">
-  <div
-    class="skull font-mono whitespace-pre text-xs origin-center leading-none"
-    style="transform: scale({scale})"
-  >
-    <pre class="m-0 p-0">
+	<div
+		class="skull origin-center whitespace-pre font-mono text-xs leading-none"
+		style="transform: scale({scale})"
+	>
+		<pre class="m-0 p-0">
                      .ed"""" """$$$$be.
                    -"           ^""**$$$e.
                  ."                   '$$$c
@@ -39,5 +39,5 @@
         ^*$E")$..$"                         *   .ee==d%
            $.d$$$*                           *  J$$$e*
             """""                              "$$$"</pre>
-  </div>
+	</div>
 </div>

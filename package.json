@@ -16,7 +16,7 @@
 		"test:coverage": "vitest --coverage"
 	},
 	"engines": {
-		 "node": "20.x"
+		"node": "20.x"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.3",

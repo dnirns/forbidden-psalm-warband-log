@@ -279,9 +279,7 @@ describe('characterUtils', () => {
 
 				const result = handleSpellcasterChange(character, originalCharacter, true);
 
-				expect(result.removedItems).toEqual([
-					{ name: 'Shield', cost: 0 }
-				]);
+				expect(result.removedItems).toEqual([{ name: 'Shield', cost: 0 }]);
 				expect(result.refundAmount).toBe(0);
 			});
 

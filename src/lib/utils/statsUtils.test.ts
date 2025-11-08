@@ -94,9 +94,7 @@ describe('statsUtils', () => {
 				items: ['Sword', 'Unknown Item'],
 				pickedUpItems: []
 			};
-			const items = [
-				{ item: 'Sword', cost: 4 }
-			];
+			const items = [{ item: 'Sword', cost: 4 }];
 
 			expect(calculateCharacterCost(character, items)).toBe(4);
 		});
@@ -178,18 +176,14 @@ describe('statsUtils', () => {
 
 		it('should ignore empty item slots', () => {
 			const characterItems = ['Light Armour', '', ''];
-			const itemsList = [
-				{ item: 'Light Armour', cost: 2, armour: 1 }
-			];
+			const itemsList = [{ item: 'Light Armour', cost: 2, armour: 1 }];
 
 			expect(calculateTotalArmour(characterItems, itemsList)).toBe(1);
 		});
 
 		it('should handle items not in the items list', () => {
 			const characterItems = ['Light Armour', 'Unknown Item'];
-			const itemsList = [
-				{ item: 'Light Armour', cost: 2, armour: 1 }
-			];
+			const itemsList = [{ item: 'Light Armour', cost: 2, armour: 1 }];
 
 			expect(calculateTotalArmour(characterItems, itemsList)).toBe(1);
 		});
@@ -292,9 +286,7 @@ describe('statsUtils', () => {
 				...baseCharacter,
 				items: ['Backpack']
 			};
-			const items = [
-				{ item: 'Backpack', cost: 1, extraInventorySlots: 2 }
-			];
+			const items = [{ item: 'Backpack', cost: 1, extraInventorySlots: 2 }];
 
 			const result = calculateModifiedStats(character, emptyFeats, emptyFlaws, items);
 
@@ -349,9 +341,7 @@ describe('statsUtils', () => {
 				flaws: ['Weak Hands'],
 				injuries: ['Lost Limb']
 			};
-			const items = [
-				{ item: 'Backpack', cost: 1, extraInventorySlots: 2 }
-			];
+			const items = [{ item: 'Backpack', cost: 1, extraInventorySlots: 2 }];
 			const feats: FeatOrFlaw[] = [
 				{
 					name: 'Strong Back',

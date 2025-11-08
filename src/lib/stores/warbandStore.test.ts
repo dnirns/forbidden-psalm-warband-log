@@ -147,7 +147,9 @@ describe('warbandStore', () => {
 	describe('deleteCharacter', () => {
 		it('should remove character and refund cost', async () => {
 			vi.mocked(calculateCharacterCost).mockReturnValue(25);
-			warbandStore.initialize(createData({ characters: [createCharacter(), createCharacter()], gold: 50 }));
+			warbandStore.initialize(
+				createData({ characters: [createCharacter(), createCharacter()], gold: 50 })
+			);
 			await warbandStore.deleteCharacter(0);
 
 			expect(get(warbandStore).data.characters).toHaveLength(1);

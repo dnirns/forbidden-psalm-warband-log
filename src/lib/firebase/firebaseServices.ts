@@ -33,11 +33,11 @@ export const saveToFirestore = async (
 			flaws: any[];
 			pickedUpItems: string[];
 			ammoTrackers: any[];
-			notes: string
+			notes: string;
 		}[];
 		gold: number;
 		xp: number;
-		notes: string
+		notes: string;
 	}
 ): Promise<void> => {
 	try {
