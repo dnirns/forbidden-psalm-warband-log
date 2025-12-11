@@ -31,3 +31,4 @@ coverage
 .idea
 .vscode
 .svelte-kit
+.settings.json

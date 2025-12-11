@@ -416,6 +416,7 @@
 			await warbandStore.saveCharacter(currentCharacter, selectedIndex);
 			unlockBodyScroll();
 		} catch (error) {
+			console.error('Error saving character', error);
 			alert('Error saving character. Please try again.');
 		}
 	};
@@ -719,7 +720,7 @@
 				{#if currentCharacter.inventory > 0}
 					<h3 class="jacquard-24-regular text-xl font-bold text-black sm:text-2xl">Items:</h3>
 					<div class="space-y-4">
-						{#each Array(currentCharacter.inventory) as _, i}
+						{#each Array.from({ length: currentCharacter.inventory }, (_, index) => index) as i}
 							{#if !currentCharacter.isSpellcaster || (i !== 0 && i !== 1)}
 								<div class="flex items-center gap-2">
 									<div class="flex-1">
@@ -796,7 +797,7 @@
 					<p class="jacquard-24-regular text-xl font-bold text-black sm:text-2xl">Feats:</p>
 					{#if currentCharacter.feats.length > 0}
 						<ul class="mb-2 space-y-2 text-lg">
-							{#each currentCharacter.feats as feat, i}
+							{#each currentCharacter.feats as feat}
 								<div class="flex items-center gap-2">
 									<div
 										class="flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-base text-black"
@@ -856,7 +857,7 @@
 					<p class="jacquard-24-regular text-xl font-bold text-black sm:text-2xl">Flaws:</p>
 					{#if currentCharacter.flaws.length > 0}
 						<ul class="mb-2 space-y-2 text-lg">
-							{#each currentCharacter.flaws as flaw, i}
+							{#each currentCharacter.flaws as flaw}
 								<div class="flex items-center gap-2">
 									<div
 										class="flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-base text-black"
@@ -913,7 +914,7 @@
 					<p class="jacquard-24-regular text-xl font-bold text-black sm:text-2xl">Injuries:</p>
 					{#if currentCharacter.injuries?.length > 0}
 						<ul class="mb-2 space-y-2 text-lg">
-							{#each currentCharacter.injuries as injury, i}
+							{#each currentCharacter.injuries as injury}
 								<div class="flex items-center gap-2">
 									<div
 										class="flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-base text-black"

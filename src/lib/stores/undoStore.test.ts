@@ -4,7 +4,7 @@ import { undoStore } from '$lib';
 import type { Character, WarbandData } from '$lib/types';
 import { saveToFirestore } from '$lib/firebase/firebaseServices';
 import { getAuth } from 'firebase/auth';
-import type { User } from 'firebase/auth';
+import type { User, Auth } from 'firebase/auth';
 
 vi.mock('firebase/auth');
 vi.mock('$lib/firebase/firebaseServices');
@@ -50,6 +50,11 @@ const mockAction: UndoAction = {
 	warbandData: mockWarband,
 	description: 'Test action'
 };
+
+const createMockAuth = (user: User | null): Auth =>
+	({
+		currentUser: user
+	}) as Auth;
 
 describe('undoStore', () => {
 	const mockUser: User = {
@@ -120,7 +125,7 @@ describe('undoStore', () => {
 
 	describe('undo', () => {
 		beforeEach(() => {
-			vi.mocked(getAuth).mockReturnValue({ currentUser: mockUser } as any);
+			vi.mocked(getAuth).mockReturnValue(createMockAuth(mockUser));
 			vi.mocked(saveToFirestore).mockResolvedValue(undefined);
 		});
 
@@ -171,7 +176,7 @@ describe('undoStore', () => {
 		});
 
 		it('should do nothing when user is not authenticated', async () => {
-			vi.mocked(getAuth).mockReturnValue({ currentUser: null } as any);
+			vi.mocked(getAuth).mockReturnValue(createMockAuth(null));
 			undoStore.setUndoAction(mockAction);
 
 			await undoStore.undo();

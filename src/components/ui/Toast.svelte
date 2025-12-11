@@ -24,6 +24,7 @@
 					try {
 						await undoStore.undo();
 					} catch (error) {
+						console.error('Failed to undo action', error);
 						alert('Failed to undo. Please try again.');
 					}
 				}}

@@ -32,7 +32,7 @@
 
 	let unsubscribeFirestore: (() => void) | undefined;
 
-	$: ({ data: warbandData, showModal, selectedIndex, currentCharacter } = $warbandStore);
+	$: ({ data: warbandData, selectedIndex, currentCharacter } = $warbandStore);
 
 	$: baseHP = 8 + currentCharacter.toughness;
 	$: modifiedStats = calculateModifiedStats(currentCharacter, feats, flaws, items);

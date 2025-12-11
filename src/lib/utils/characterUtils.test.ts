@@ -135,15 +135,6 @@ describe('characterUtils', () => {
 	});
 
 	describe('isItemRestrictedForSpellcaster', () => {
-		const mockItems: Item[] = [
-			{ item: 'Heavy Armour', cost: 20, armour: 3 },
-			{ item: 'Shield', cost: 2 },
-			{ item: 'Bastard Sword', cost: 10, twoHanded: true },
-			{ item: 'Bow', cost: 5, twoHanded: true },
-			{ item: 'Sword', cost: 4 },
-			{ item: 'Light Armour', cost: 2, armour: 1 }
-		];
-
 		it('should return true for Heavy Armour', () => {
 			expect(isItemRestrictedForSpellcaster('Heavy Armour')).toBe(true);
 		});
@@ -180,14 +171,6 @@ describe('characterUtils', () => {
 	describe('handleSpellcasterChange', () => {
 		let character: Character;
 		let originalCharacter: Character | null;
-		const mockItems: Item[] = [
-			{ item: 'Heavy Armour', cost: 20, armour: 3 },
-			{ item: 'Shield', cost: 2 },
-			{ item: 'Bastard Sword', cost: 10, twoHanded: true },
-			{ item: 'Sword', cost: 4 },
-			{ item: 'Light Armour', cost: 2, armour: 1 }
-		];
-
 		beforeEach(() => {
 			character = {
 				...defaultCharacter(),

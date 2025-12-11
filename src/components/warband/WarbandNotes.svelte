@@ -48,6 +48,7 @@
 			showNotes = false;
 			unlockBodyScroll();
 		} catch (error) {
+			console.error('Failed to save notes', error);
 			alert('Failed to save notes. Please try again.');
 		}
 	};

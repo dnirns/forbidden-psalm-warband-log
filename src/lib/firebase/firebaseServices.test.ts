@@ -4,11 +4,13 @@ import {
 	signOutService,
 	saveToFirestore,
 	loadUserData,
-	setupRealtimeListener
+	setupRealtimeListener,
+	defaultCharacter
 } from '$lib';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import type { WarbandData, Character } from '$lib';
 
 vi.mock('firebase/auth');
 vi.mock('firebase/firestore');
@@ -25,69 +27,12 @@ describe('firebaseServices', () => {
 		displayName: 'Test User'
 	} as User;
 
-	const mockCharacter: {
-		name: string;
-		ancestry: string;
-		background: string;
-		move: number;
-		fight: number;
-		shoot: number;
-		armour: number;
-		will: number;
-		health: number;
-		hp: number;
-		toughness: number;
-		items: any[];
-		feats: any[];
-		flaws: any[];
-		pickedUpItems: any[];
-		ammoTrackers: any[];
-		notes: string;
-	} = {
-		name: 'Test Character',
-		ancestry: 'human',
-		background: 'soldier',
-		move: 6,
-		fight: 2,
-		shoot: 0,
-		armour: 10,
-		will: 0,
-		health: 8,
-		hp: 10,
-		toughness: 2,
-		items: [],
-		feats: [],
-		flaws: [],
-		pickedUpItems: [],
-		ammoTrackers: [],
-		notes: ''
+	const mockCharacter: Character = {
+		...defaultCharacter(),
+		name: 'Test Character'
 	};
 
-	const mockWarbandData: {
-		warbandName: string;
-		characters: {
-			name: string;
-			ancestry: string;
-			background: string;
-			move: number;
-			fight: number;
-			shoot: number;
-			armour: number;
-			will: number;
-			health: number;
-			hp: number;
-			toughness: number;
-			items: any[];
-			feats: any[];
-			flaws: any[];
-			pickedUpItems: any[];
-			ammoTrackers: any[];
-			notes: string;
-		}[];
-		gold: number;
-		xp: number;
-		notes: string;
-	} = {
+	const mockWarbandData: WarbandData = {
 		warbandName: 'Test Warband',
 		characters: [mockCharacter],
 		gold: 50,
@@ -164,7 +109,7 @@ describe('firebaseServices', () => {
 		});
 
 		it('should process character arrays correctly', async () => {
-			const characterWithData = {
+			const characterWithData: Character = {
 				...mockCharacter,
 				items: ['sword'],
 				feats: ['tough'],
@@ -192,7 +137,11 @@ describe('firebaseServices', () => {
 		});
 
 		it('should handle undefined arrays as empty arrays', async () => {
-			const character = { ...mockCharacter, feats: undefined, flaws: undefined } as any;
+			const character = {
+				...mockCharacter,
+				feats: undefined,
+				flaws: undefined
+			} as unknown as Character;
 			(getDoc as Mock).mockResolvedValue({ exists: () => false });
 
 			await saveToFirestore(mockUser, { ...mockWarbandData, characters: [character] });

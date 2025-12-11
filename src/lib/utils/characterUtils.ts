@@ -36,7 +36,7 @@ export const handleSpellcasterChange = (
 	if (checked) {
 		const restrictedItems = character.items.filter(isItemRestrictedForSpellcaster);
 		let refundAmount = 0;
-		let removedItems: { name: string; cost: number }[] = [];
+		const removedItems: { name: string; cost: number }[] = [];
 
 		if (restrictedItems.length > 0) {
 			restrictedItems.forEach((itemName) => {

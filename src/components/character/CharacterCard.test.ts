@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import type { Character, WarbandData, Item } from '$lib/types';
-import { getAuth } from 'firebase/auth';
+import { getAuth, type Auth } from 'firebase/auth';
 import { saveToFirestore } from '$lib/firebase';
 
 // @ts-expect-error - Svelte component import
@@ -88,13 +88,13 @@ const mockItems: Item[] = [
 ];
 
 describe('CharacterCard', () => {
-	const mockAuth = { currentUser: { uid: 'test-user' } };
+	const mockAuth = { currentUser: { uid: 'test-user' } } as unknown as Auth;
 	const editCharacter = vi.fn();
 	const deleteCharacter = vi.fn();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(getAuth).mockReturnValue(mockAuth as any);
+		vi.mocked(getAuth).mockReturnValue(mockAuth);
 		vi.mocked(saveToFirestore).mockResolvedValue(undefined);
 	});
 

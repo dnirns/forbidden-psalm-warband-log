@@ -13,7 +13,7 @@ export type UndoAction = {
 };
 
 const createUndoStore = () => {
-	const { subscribe, set, update } = writable<UndoAction | null>(null);
+	const { subscribe, set } = writable<UndoAction | null>(null);
 	let timeoutId: number;
 
 	return {
@@ -41,11 +41,7 @@ const createUndoStore = () => {
 
 				const auth = getAuth();
 				if (auth.currentUser) {
-					try {
-						await saveToFirestore(auth.currentUser, warbandData);
-					} catch (error) {
-						throw error;
-					}
+					await saveToFirestore(auth.currentUser, warbandData);
 				}
 				set(null);
 			}

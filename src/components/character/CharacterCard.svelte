@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Character, FeatOrFlaw, WarbandData, Item } from '$lib/types';
+	import type { Character, WarbandData, Item } from '$lib/types';
 	import { feats } from '$lib/data/feats';
 	import { flaws } from '$lib/data/flaws';
 	import { calculateTotalArmour, calculateModifiedStats } from '$lib/utils';
@@ -145,6 +145,7 @@
 
 			closePickUpModal();
 		} catch (error) {
+			console.error('Failed to save picked up item', error);
 			alert('Failed to pick up item. Please try again.');
 		}
 	};
@@ -176,6 +177,7 @@
 					description: `Took 1 damage (${char.name})`
 				});
 			} catch (error) {
+				console.error('Failed to save HP change', error);
 				alert('Failed to save HP change. Please try again.');
 			}
 		}
@@ -198,11 +200,11 @@
 
 		const auth = getAuth();
 		saveToFirestore(auth.currentUser, warbandData).catch((error) => {
+			console.error('Failed to clamp HP to max', error);
 			alert('Failed to save HP change. Please try again.');
 		});
 	}
 
-	type ModifierObject = FeatOrFlaw & { statModifiers: { [key: string]: number } };
 	type StatModifierKey =
 		| 'agility'
 		| 'presence'
@@ -212,55 +214,62 @@
 		| 'equipmentSlots'
 		| 'maxRange'
 		| 'armour';
+	type TooltipVariant = 'positive' | 'negative' | 'disabled';
+	type TooltipLine = {
+		text: string;
+		variant?: TooltipVariant;
+	};
+	type TooltipContent = TooltipLine[] | string;
 
-	const getStatModifiersExplanation = (stat: StatModifierKey) => {
+	const formatModifierLine = (name: string | undefined, modifier?: number): TooltipLine | null => {
+		if (!name || modifier === undefined || typeof modifier !== 'number') {
+			return null;
+		}
+
+		return {
+			text: `${name} (${modifier > 0 ? '+' : ''}${modifier})`,
+			variant: modifier > 0 ? 'positive' : 'negative'
+		};
+	};
+
+	const getStatModifiersExplanation = (stat: StatModifierKey): TooltipLine[] => {
 		const affectingFeats = char.feats
 			.map((featName) => feats.find((f) => f.name === featName))
-			.filter(
-				(feat): feat is ModifierObject =>
-					feat !== undefined &&
-					feat.statModifiers !== undefined &&
-					typeof feat.statModifiers[stat] === 'number'
-			)
-			.map((feat) => {
-				const modifier = feat.statModifiers[stat];
-				if (modifier === undefined || typeof modifier !== 'number') return '';
-				return `<span class="${modifier > 0 ? 'text-green-600' : 'text-red-500'}">${feat.name} (${modifier > 0 ? '+' : ''}${modifier})</span>`;
-			});
+			.map((feat) => formatModifierLine(feat?.name, feat?.statModifiers?.[stat]))
+			.filter((line): line is TooltipLine => Boolean(line));
 
 		const affectingFlaws = char.flaws
 			.map((flawName) => flaws.find((f) => f.name === flawName))
-			.filter(
-				(flaw): flaw is ModifierObject =>
-					flaw !== undefined &&
-					flaw.statModifiers !== undefined &&
-					typeof flaw.statModifiers[stat] === 'number'
-			)
-			.map((flaw) => {
-				const modifier = flaw.statModifiers[stat];
-				if (modifier === undefined || typeof modifier !== 'number') return '';
-				return `<span class="${modifier > 0 ? 'text-green-600' : 'text-red-500'}">${flaw.name} (${modifier > 0 ? '+' : ''}${modifier})</span>`;
-			});
+			.map((flaw) => formatModifierLine(flaw?.name, flaw?.statModifiers?.[stat]))
+			.filter((line): line is TooltipLine => Boolean(line));
 
 		const affectingInjuries = char.injuries
 			.map((injuryName) => injuries.find((i) => i.name === injuryName))
-			.filter((injury) => injury?.statModifiers && typeof injury.statModifiers[stat] === 'number')
-			.map((injury) => {
-				const modifier = injury?.statModifiers[stat];
-				if (modifier === undefined || typeof modifier !== 'number') return '';
-				return `<span class="${modifier > 0 ? 'text-green-600' : 'text-red-500'}">${injury?.name} (${modifier > 0 ? '+' : ''}${modifier})</span>`;
-			});
+			.map((injury) => formatModifierLine(injury?.name, injury?.statModifiers?.[stat]))
+			.filter((line): line is TooltipLine => Boolean(line));
 
-		const allModifiers = [...affectingFeats, ...affectingFlaws, ...affectingInjuries].filter(
-			Boolean
-		);
-		return allModifiers.length > 0 ? allModifiers.join('\n') : 'No modifiers';
+		const allModifiers = [...affectingFeats, ...affectingFlaws, ...affectingInjuries];
+		return allModifiers.length > 0 ? allModifiers : [{ text: 'No modifiers' }];
 	};
 
 	let tooltipPosition = { x: 0, y: 0, show: false };
-	let activeContent = '';
+	let tooltipLines: TooltipLine[] = [];
 
-	const showTooltip = (event: MouseEvent | TouchEvent, content: string) => {
+	const parseStringContent = (content: string): TooltipLine[] => {
+		return content
+			.split('\n')
+			.map((line) => line.trim())
+			.filter(Boolean)
+			.map((line) => {
+				const normalized = line.toLowerCase();
+				return {
+					text: line,
+					variant: normalized.includes('disabled') ? 'disabled' : undefined
+				};
+			});
+	};
+
+	const showTooltip = (event: MouseEvent | TouchEvent, content: TooltipContent) => {
 		event.preventDefault();
 		const target = (event.target as HTMLElement) || (event.currentTarget as HTMLElement);
 		const rect = target?.getBoundingClientRect() || { left: 0, top: 0 };
@@ -268,22 +277,18 @@
 		const y = rect.top - 10;
 
 		tooltipPosition = { x, y, show: true };
-		if (content.includes('(Disabled by')) {
-			const [description, disabledReason] = content.split('\n');
-			activeContent = description ? description + '\n' : '';
-			activeContent += `<span class="disabled-reason">${disabledReason}</span>`;
-		} else {
-			activeContent = content;
-		}
+		const nextLines = typeof content === 'string' ? parseStringContent(content) : [...content];
+		tooltipLines = nextLines.length > 0 ? nextLines : [{ text: 'No details available' }];
 	};
 
 	const hideTooltip = () => {
 		tooltipPosition.show = false;
+		tooltipLines = [];
 	};
 
 	const handleTooltipTrigger = (
 		event: MouseEvent | TouchEvent | KeyboardEvent,
-		content: string
+		content: TooltipContent
 	) => {
 		if (event.type === 'touchstart') {
 			showTooltip(event as TouchEvent, content);
@@ -344,6 +349,7 @@
 					description: `Dropped ${itemName}`
 				});
 			} catch (error) {
+				console.error('Failed to drop item', error);
 				alert('Failed to drop item. Please try again.');
 			}
 		}
@@ -406,6 +412,7 @@
 					description: `Used ammo for ${weaponName}`
 				});
 			} catch (error) {
+				console.error('Failed to save ammo change', error);
 				alert('Failed to save ammo change. Please try again.');
 			}
 		}
@@ -442,6 +449,7 @@
 					description: `Refilled ammo for ${weaponName}`
 				});
 			} catch (error) {
+				console.error('Failed to refill ammo', error);
 				alert('Failed to refill ammo. Please try again.');
 			}
 		}
@@ -467,6 +475,7 @@
 				description: `Revived ${char.name}`
 			});
 		} catch (error) {
+			console.error('Failed to revive character', error);
 			alert('Failed to revive character. Please try again.');
 		}
 	};
@@ -513,6 +522,7 @@
 					description: `Added injury: ${injuryName}`
 				});
 			} catch (error) {
+				console.error('Failed to add injury', error);
 				alert('Failed to add injury. Please try again.');
 			}
 		}
@@ -555,6 +565,7 @@
 				description: `Removed injury: ${injuryName}`
 			});
 		} catch (error) {
+			console.error('Failed to remove injury', error);
 			alert('Failed to remove injury. Please try again.');
 		}
 	};
@@ -572,11 +583,11 @@
 		const item = items.find((i) => i.item === itemName);
 		if (char.isSpellcaster) {
 			if (item?.twoHanded) {
-				return '<span class="text-red-500">Two-handed weapons cannot be used by Spellcasters</span>';
+				return 'Disabled: Two-handed weapons cannot be used by Spellcasters';
 			} else if (itemName === 'Shield') {
-				return '<span class="text-red-500">Shields cannot be used by Spellcasters</span>';
+				return 'Disabled: Shields cannot be used by Spellcasters';
 			} else if (itemName === 'Heavy Armour') {
-				return '<span class="text-red-500">Heavy Armour cannot be used by Spellcasters</span>';
+				return 'Disabled: Heavy Armour cannot be used by Spellcasters';
 			}
 		}
 		if (modifiedStats.weaponRestrictions === 'one-handed') {
@@ -1649,7 +1660,9 @@
 
 {#if tooltipPosition.show}
 	<div class="tooltip-container" style="left: {tooltipPosition.x}px; top: {tooltipPosition.y}px;">
-		{@html activeContent}
+		{#each tooltipLines as line}
+			<p class={`tooltip-line ${line.variant ? `tooltip-${line.variant}` : ''}`}>{line.text}</p>
+		{/each}
 	</div>
 {/if}
 
@@ -1719,17 +1732,31 @@
 		font-size: 0.875rem;
 		line-height: 1.25rem;
 		pointer-events: none;
-		white-space: pre-line;
+		white-space: normal;
 		margin-top: -0.5rem;
 		font-family: 'Lora', serif;
 	}
 
-	:global(.tooltip-container .text-red-500) {
+	:global(.tooltip-line) {
+		margin: 0;
+		line-height: 1.25rem;
+	}
+
+	:global(.tooltip-line + .tooltip-line) {
+		margin-top: 0.25rem;
+	}
+
+	:global(.tooltip-line.tooltip-positive) {
+		color: rgb(34, 197, 94);
+	}
+
+	:global(.tooltip-line.tooltip-negative),
+	:global(.tooltip-line.tooltip-disabled) {
 		color: rgb(239, 68, 68);
 	}
 
-	:global(.tooltip-container .disabled-reason) {
-		color: rgb(239, 68, 68);
+	:global(.tooltip-line.tooltip-disabled) {
+		font-style: italic;
 	}
 
 	.dead {

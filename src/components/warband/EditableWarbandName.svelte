@@ -2,15 +2,19 @@
 	import Button from '../ui/Button.svelte';
 	import EditButton from '../ui/EditButton.svelte';
 	import { warbandStore } from '$lib/stores/warbandStore';
+	import { tick } from 'svelte';
 
 	export let warbandName: string;
 
 	let isEditing = false;
 	let tempName = '';
+	let nameInput: HTMLInputElement | null = null;
 
-	const startEditing = () => {
+	const startEditing = async () => {
 		isEditing = true;
 		tempName = warbandName;
+		await tick();
+		nameInput?.focus();
 	};
 
 	const saveWarbandName = async () => {
@@ -18,6 +22,7 @@
 			await warbandStore.updateWarband({ warbandName: tempName });
 			isEditing = false;
 		} catch (error) {
+			console.error('Failed to save warband name', error);
 			alert('Failed to save warband name. Please try again.');
 		}
 	};
@@ -33,9 +38,9 @@
 		<input
 			type="text"
 			bind:value={tempName}
+			bind:this={nameInput}
 			class="lora w-48 rounded border border-gray-300 px-2 py-1 text-base text-black"
 			on:keydown={handleKeydown}
-			autofocus
 		/>
 		<Button onClick={saveWarbandName}>Save</Button>
 	</div>

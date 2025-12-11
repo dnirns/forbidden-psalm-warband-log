@@ -14,6 +14,7 @@
 			try {
 				await onUpdate(value + step);
 			} catch (error) {
+				console.error(`Failed to increment ${label}`, error);
 				alert(`Failed to increment ${label}. Please try again.`);
 			}
 		}
@@ -24,6 +25,7 @@
 			try {
 				await onUpdate(value - step);
 			} catch (error) {
+				console.error(`Failed to decrement ${label}`, error);
 				alert(`Failed to decrement ${label}. Please try again.`);
 			}
 		}

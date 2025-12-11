@@ -41,7 +41,9 @@ export const audioStore = (() => {
 		if (audio) {
 			audio.pause();
 			audio.currentTime = 0;
-			audio.play().catch((error: Error) => {});
+			audio.play().catch((error: Error) => {
+				console.error(`Failed to play ${name} sound`, error);
+			});
 		}
 	};
 

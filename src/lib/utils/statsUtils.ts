@@ -1,4 +1,4 @@
-import type { Character, FeatOrFlaw } from '../types';
+import type { Character, FeatOrFlaw, Item } from '../types';
 import { injuries } from '$lib/data/injuries';
 type ModifiedStats = {
 	agility: number;
@@ -56,7 +56,7 @@ export const defaultCharacter = (): Character => {
 	};
 };
 
-export const calculateTotalArmour = (characterItems: string[], itemsList: any[]): number => {
+export const calculateTotalArmour = (characterItems: string[], itemsList: Item[]): number => {
 	return characterItems.reduce((acc, itemName) => {
 		const item = itemsList.find((i) => i.item === itemName);
 		return acc + (item?.armour || 0);
@@ -67,7 +67,7 @@ export const calculateModifiedStats = (
 	character: Character,
 	feats: FeatOrFlaw[],
 	flaws: FeatOrFlaw[],
-	itemsList: any[]
+	itemsList: Item[]
 ): ModifiedStats => {
 	const modifiedStats: ModifiedStats = {
 		agility: character.agility,

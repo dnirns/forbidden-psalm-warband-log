@@ -5,7 +5,7 @@ import {
 	calculateTotalArmour,
 	calculateModifiedStats
 } from '$lib';
-import type { Character, FeatOrFlaw } from '$lib';
+import type { Character, FeatOrFlaw, Item } from '$lib';
 
 describe('statsUtils', () => {
 	describe('calculateCharacterCost', () => {
@@ -193,7 +193,7 @@ describe('statsUtils', () => {
 		let baseCharacter: Character;
 		let emptyFeats: FeatOrFlaw[];
 		let emptyFlaws: FeatOrFlaw[];
-		let emptyItems: any[];
+		let emptyItems: Item[];
 
 		beforeEach(() => {
 			baseCharacter = {

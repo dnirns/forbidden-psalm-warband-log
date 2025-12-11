@@ -66,49 +66,43 @@ const createWarbandStore = () => {
 		reset: () => set(initialState),
 
 		updateWarband: async (newData: Partial<WarbandData>) => {
+			const store = get({ subscribe });
+			const updatedData = { ...store.data, ...newData };
+
+			update((state) => ({ ...state, isSaving: true }));
+
 			try {
-				const store = get({ subscribe });
-				const updatedData = { ...store.data, ...newData };
-
-				update((state) => ({ ...state, isSaving: true }));
-
 				await saveToFirestore(auth.currentUser, updatedData);
 				update((state) => ({ ...state, data: updatedData }));
-			} catch (error) {
-				throw error;
 			} finally {
 				update((state) => ({ ...state, isSaving: false }));
 			}
 		},
 
 		saveCharacter: async (character: Character, index: number = -1) => {
-			try {
-				const store = get({ subscribe });
-				const goldDifference = calculateGoldDifference(character, index, store);
+			const store = get({ subscribe });
+			const goldDifference = calculateGoldDifference(character, index, store);
 
-				const updatedCharacters = [...store.data.characters];
+			const updatedCharacters = [...store.data.characters];
 
-				if (index === -1) {
-					updatedCharacters.push(character);
-				} else {
-					updatedCharacters[index] = character;
-				}
-
-				await warbandStore.updateWarband({
-					characters: updatedCharacters,
-					gold: Math.max(0, store.data.gold - goldDifference)
-				});
-
-				update((state) => ({
-					...state,
-					currentCharacter: defaultCharacter(),
-					selectedIndex: -1,
-					showModal: false,
-					originalCharacterGold: 0
-				}));
-			} catch (error) {
-				throw error;
+			if (index === -1) {
+				updatedCharacters.push(character);
+			} else {
+				updatedCharacters[index] = character;
 			}
+
+			await warbandStore.updateWarband({
+				characters: updatedCharacters,
+				gold: Math.max(0, store.data.gold - goldDifference)
+			});
+
+			update((state) => ({
+				...state,
+				currentCharacter: defaultCharacter(),
+				selectedIndex: -1,
+				showModal: false,
+				originalCharacterGold: 0
+			}));
 		},
 
 		deleteCharacter: async (index: number) => {
@@ -123,21 +117,17 @@ const createWarbandStore = () => {
 
 			const updatedCharacters = store.data.characters.filter((_, i) => i !== index);
 
-			try {
-				await warbandStore.updateWarband({
-					characters: updatedCharacters,
-					gold: store.data.gold + characterCost
-				});
+			await warbandStore.updateWarband({
+				characters: updatedCharacters,
+				gold: store.data.gold + characterCost
+			});
 
-				undoStore.setUndoAction({
-					characterIndex: index,
-					previousState: characterToDelete,
-					warbandData: previousWarbandData,
-					description: `Deleted ${characterToDelete.name}`
-				});
-			} catch (error) {
-				throw error;
-			}
+			undoStore.setUndoAction({
+				characterIndex: index,
+				previousState: characterToDelete,
+				warbandData: previousWarbandData,
+				description: `Deleted ${characterToDelete.name}`
+			});
 		},
 
 		editCharacter: (index: number) => {
