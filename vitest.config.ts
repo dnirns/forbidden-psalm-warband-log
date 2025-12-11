@@ -23,11 +23,15 @@ export default defineConfig({
 			]
 		},
 		alias: {
-			$lib: '/src/lib'
+			$lib: '/src/lib',
+			$domain: '/src/domain'
 		}
 	},
 	resolve: {
-		conditions: ['browser']
+		conditions: ['browser'],
+		alias: {
+			$domain: '/src/domain'
+		}
 	},
 	ssr: {
 		noExternal: ['svelte']

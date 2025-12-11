@@ -1,5 +1,6 @@
-import type { Character, FeatOrFlaw, Item } from '../types';
-import { injuries } from '$lib/data/injuries';
+import type { Character, FeatOrFlaw, Item } from '$lib/types';
+import { injuries } from '$domain/data';
+
 type ModifiedStats = {
 	agility: number;
 	presence: number;
@@ -11,6 +12,10 @@ type ModifiedStats = {
 	maxRange: number;
 	weaponRestrictions: string;
 };
+
+export const BASE_HP = 8;
+export const BASE_INVENTORY = 5;
+export const MIN_INVENTORY = 2;
 
 export const calculateCharacterCost = (
 	character: Character,
@@ -35,16 +40,17 @@ export const calculateCharacterCost = (
 export const defaultCharacter = (): Character => {
 	const strength = 0;
 	const toughness = 0;
+	const inventory = BASE_INVENTORY + strength;
 	return {
 		name: '',
-		hp: 8 + toughness,
+		hp: BASE_HP + toughness,
 		armour: 0,
 		agility: 0,
 		presence: 0,
 		strength,
 		toughness,
-		inventory: 5 + strength,
-		items: Array(5 + strength).fill(''),
+		inventory,
+		items: Array(inventory).fill(''),
 		pickedUpItems: [],
 		feats: [],
 		flaws: [],
@@ -132,4 +138,19 @@ export const calculateModifiedStats = (
 	});
 
 	return modifiedStats;
+};
+
+export const getBaseHP = (toughness: number) => BASE_HP + toughness;
+export const getBaseInventory = (strength: number) => BASE_INVENTORY + strength;
+
+export const clampHpToMax = (
+	character: Character,
+	baseHP: number,
+	modifiedStats: Pick<ModifiedStats, 'hp'>
+) => {
+	const maxHP = baseHP + modifiedStats.hp;
+	return {
+		character: { ...character, hp: Math.min(character.hp, maxHP) },
+		maxHP
+	};
 };

@@ -6,9 +6,10 @@
 
 	export let warbandName: string;
 
-	let isEditing = false;
-	let tempName = '';
-	let nameInput: HTMLInputElement | null = null;
+let isEditing = false;
+let tempName = '';
+let nameInput: HTMLInputElement | null = null;
+let errorMessage = '';
 
 	const startEditing = async () => {
 		isEditing = true;
@@ -21,9 +22,10 @@
 		try {
 			await warbandStore.updateWarband({ warbandName: tempName });
 			isEditing = false;
+			errorMessage = '';
 		} catch (error) {
 			console.error('Failed to save warband name', error);
-			alert('Failed to save warband name. Please try again.');
+			errorMessage = 'Failed to save warband name. Please try again.';
 		}
 	};
 
@@ -43,6 +45,9 @@
 			on:keydown={handleKeydown}
 		/>
 		<Button onClick={saveWarbandName}>Save</Button>
+		{#if errorMessage}
+			<span class="text-sm text-red-500">{errorMessage}</span>
+		{/if}
 	</div>
 {:else}
 	<h1 class="flex items-center gap-2 text-2xl font-bold sm:text-3xl">

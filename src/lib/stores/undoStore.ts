@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import type { Character, WarbandData } from '$lib/types';
-import { saveToFirestore } from '$lib/firebase';
-import { getAuth } from 'firebase/auth';
+import { createWarbandApplicationService } from '$domain/application';
+import { firestoreWarbandRepository } from '$lib/firebase';
 
 const TIMEOUT_DURATION = 5000;
 
@@ -15,6 +15,8 @@ export type UndoAction = {
 const createUndoStore = () => {
 	const { subscribe, set } = writable<UndoAction | null>(null);
 	let timeoutId: number;
+
+	const warbandApplication = createWarbandApplicationService(firestoreWarbandRepository);
 
 	return {
 		subscribe,
@@ -40,9 +42,7 @@ const createUndoStore = () => {
 				}
 
 				const auth = getAuth();
-				if (auth.currentUser) {
-					await saveToFirestore(auth.currentUser, warbandData);
-				}
+				await warbandApplication.save(warbandData);
 				set(null);
 			}
 		}

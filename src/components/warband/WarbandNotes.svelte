@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { WarbandData } from '$lib/types';
-	import { saveToFirestore } from '$lib/firebase';
-	import { getAuth } from 'firebase/auth';
 	import { onMount } from 'svelte';
 	import { lockBodyScroll, unlockBodyScroll } from '$lib/utils/modalUtils';
 	import CloseButton from '../ui/CloseButton.svelte';
+	import { warbandStore } from '$lib/stores/warbandStore';
 
 	export let warbandData: WarbandData;
 
@@ -12,8 +11,7 @@
 	let tempNotes = '';
 	let notesTextarea: HTMLTextAreaElement;
 	let hasChanges = false;
-	const auth = getAuth();
-	const currentUser = auth.currentUser;
+	let errorMessage = '';
 
 	const closeAndSave = async () => {
 		if (hasChanges) {
@@ -43,13 +41,14 @@
 
 	const saveNotes = async () => {
 		try {
+			await warbandStore.updateWarband({ notes: tempNotes });
 			warbandData.notes = tempNotes;
-			await saveToFirestore(currentUser, warbandData);
+			errorMessage = '';
 			showNotes = false;
 			unlockBodyScroll();
 		} catch (error) {
 			console.error('Failed to save notes', error);
-			alert('Failed to save notes. Please try again.');
+			errorMessage = 'Failed to save notes. Please try again.';
 		}
 	};
 
@@ -171,6 +170,9 @@
 			>
 				<CloseButton onClick={closeAndSave} />
 				<h2 id="modal-title" class="mb-4 text-2xl font-bold">Warband Notes</h2>
+				{#if errorMessage}
+					<p class="text-sm text-red-700">{errorMessage}</p>
+				{/if}
 				<div class="flex h-[calc(100%-6rem)] flex-col space-y-4">
 					<!-- svelte-ignore element_invalid_self_closing_tag -->
 					<textarea

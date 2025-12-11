@@ -1,13 +1,15 @@
 <script lang="ts">
-	import type { Character, WarbandData, Item } from '$lib/types';
+import type { Character, Item } from '$lib/types';
 	import { feats } from '$lib/data/feats';
 	import { flaws } from '$lib/data/flaws';
-	import { calculateTotalArmour, calculateModifiedStats } from '$lib/utils';
+	import {
+		calculateTotalArmour,
+		calculateModifiedStats,
+		itemUsesAmmo as doesItemUseAmmo,
+		getInitialAmmo as domainInitialAmmo
+	} from '$domain/rules';
 	import Button from '../ui/Button.svelte';
 	import InvertedCrossSVG from '../icons/InvertedCrossSVG.svelte';
-	import { saveToFirestore } from '$lib/firebase';
-	import { getAuth } from 'firebase/auth';
-	import { undoStore } from '$lib/stores/undoStore';
 	import { onMount } from 'svelte';
 	import scrolls from '$lib/data/scrolls';
 	import { lockBodyScroll, unlockBodyScroll } from '$lib/utils/modalUtils';
@@ -15,16 +17,16 @@
 	import PickUpItemModal from '../modals/PickUpItemModal.svelte';
 	import { injuries } from '$lib/data/injuries';
 	import InjuryModal from '../modals/InjuryModal.svelte';
-	import { isItemRestrictedForSpellcaster } from '$lib/utils/characterUtils';
+	import { isItemRestrictedForSpellcaster } from '$domain/rules';
 	import { useAudio } from '$lib/audio';
 	import DeleteCharacterModal from '../modals/DeleteCharacterModal.svelte';
+	import { warbandStore } from '$lib/stores/warbandStore';
 
-	export let char: Character;
-	export let i: number;
-	export let editCharacter: (index: number) => void;
-	export let deleteCharacter: (index: number) => void;
-	export let items: Item[];
-	export let warbandData: WarbandData;
+export let char: Character;
+export let i: number;
+export let editCharacter: (index: number) => void;
+export let deleteCharacter: (index: number) => void;
+export let items: Item[];
 
 	let showPickUpModal = false;
 	let showInjuryModal = false;
@@ -61,124 +63,34 @@
 		lockBodyScroll();
 	};
 
+	let validationMessage = '';
+
 	const pickUpItem = async (itemName: string) => {
 		if (selectedSlotIndex === null) return;
 
-		const previousState = { ...char };
-
-		if (!char.items) {
-			char.items = Array(char.inventory).fill('');
-		} else if (char.items.length < char.inventory) {
-			char.items = [...char.items, ...Array(char.inventory - char.items.length).fill('')];
-		}
-
-		const isCleanScroll = scrolls.cleanScrolls.some((scroll) => scroll.name === itemName);
-		const isUncleanScroll = scrolls.uncleanScrolls.some((scroll) => scroll.name === itemName);
-
-		if (char.isSpellcaster && selectedSlotIndex < 2) {
-			if (selectedSlotIndex === 0) {
-				if (!isCleanScroll) {
-					alert(
-						isUncleanScroll
-							? 'Only clean scrolls can be placed in the clean scroll slot'
-							: 'Only scrolls can be placed in scroll slots'
-					);
-					return;
-				}
-			} else if (selectedSlotIndex === 1) {
-				if (!isUncleanScroll) {
-					alert(
-						isCleanScroll
-							? 'Only unclean scrolls can be placed in the unclean scroll slot'
-							: 'Only scrolls can be placed in scroll slots'
-					);
-					return;
-				}
-			}
-
-			if (isCleanScroll) {
-				char.cleanScroll = itemName;
-				char.items[0] = itemName;
-			} else {
-				char.uncleanScroll = itemName;
-				char.items[1] = itemName;
-			}
-		} else {
-			char.items[selectedSlotIndex] = itemName;
-		}
-
-		if (!char.pickedUpItems) {
-			char.pickedUpItems = [];
-		}
-		if (!char.pickedUpItems.includes(itemName)) {
-			char.pickedUpItems.push(itemName);
-		}
-
-		if (itemUsesAmmo(itemName)) {
-			char.ammoTrackers.push({
-				weaponName: itemName,
-				slotIndex: selectedSlotIndex,
-				currentAmmo: getInitialAmmo(itemName)
-			});
-		}
-
-		const itemObj = items.find((i) => i.item === itemName);
-		if (itemObj?.extraInventorySlots) {
-			char.inventory += itemObj.extraInventorySlots;
-			char.items = [...char.items, ...Array(itemObj.extraInventorySlots).fill('')];
-		}
-
-		const updatedCharacters = [...warbandData.characters];
-		updatedCharacters[i] = char;
-		warbandData.characters = updatedCharacters;
-
 		try {
-			const auth = getAuth();
-			await saveToFirestore(auth.currentUser, warbandData);
-
-			undoStore.setUndoAction({
-				characterIndex: i,
-				previousState,
-				warbandData: { ...warbandData },
-				description: `Picked up ${itemName}`
-			});
+			const result = await warbandStore.pickUpItem(i, selectedSlotIndex, itemName);
+			if (result?.error) {
+				validationMessage = result.error;
+				return;
+			}
 
 			closePickUpModal();
 		} catch (error) {
 			console.error('Failed to save picked up item', error);
-			alert('Failed to pick up item. Please try again.');
+			validationMessage = 'Failed to pick up item. Please try again.';
 		}
 	};
 
 	const takeDamage = async () => {
 		if (char.hp > 0) {
-			const previousState = { ...char };
-
-			char.hp--;
-
-			if (char.hp <= 0) {
-				play('death');
-			} else {
-				play('injury');
-			}
-
-			const updatedCharacters = [...warbandData.characters];
-			updatedCharacters[i] = char;
-			warbandData.characters = updatedCharacters;
-
 			try {
-				const auth = getAuth();
-				await saveToFirestore(auth.currentUser, warbandData);
-
-				undoStore.setUndoAction({
-					characterIndex: i,
-					previousState,
-					warbandData: { ...warbandData },
-					description: `Took 1 damage (${char.name})`
-				});
+				const willDie = char.hp === 1;
+				await warbandStore.takeDamage(i);
+				play(willDie ? 'death' : 'injury');
 			} catch (error) {
 				console.error('Failed to save HP change', error);
-				alert('Failed to save HP change. Please try again.');
+				validationMessage = 'Failed to save HP change. Please try again.';
 			}
 		}
 	};
@@ -191,17 +103,9 @@
 	$: maxHP = baseHP + modifiedStats.hp;
 
 	$: if (char.hp > maxHP) {
-		const updatedChar = { ...char };
-		updatedChar.hp = maxHP;
-
-		const updatedCharacters = [...warbandData.characters];
-		updatedCharacters[i] = updatedChar;
-		warbandData.characters = updatedCharacters;
-
-		const auth = getAuth();
-		saveToFirestore(auth.currentUser, warbandData).catch((error) => {
+		warbandStore.clampCharacterHp(i, maxHP).catch((error) => {
 			console.error('Failed to clamp HP to max', error);
-			alert('Failed to save HP change. Please try again.');
+			validationMessage = 'Failed to save HP change. Please try again.';
 		});
 	}
 
@@ -301,120 +205,31 @@
 	};
 
 	const dropItem = async (itemName: string) => {
-		const previousState = { ...char };
-
 		const itemIndex = char.items.findIndex((item) => item === itemName);
-		if (itemIndex !== -1) {
-			const isCleanScroll = scrolls.cleanScrolls.some((scroll) => scroll.name === itemName);
-			const isUncleanScroll = scrolls.uncleanScrolls.some((scroll) => scroll.name === itemName);
+		if (itemIndex === -1) return;
 
-			if (char.isSpellcaster && (isCleanScroll || isUncleanScroll) && itemIndex < 2) {
-				if (isCleanScroll) {
-					char.cleanScroll = '';
-					char.items[0] = '[Clean Scroll Slot]';
-				} else {
-					char.uncleanScroll = '';
-					char.items[1] = '[Unclean Scroll Slot]';
-				}
-			} else {
-				const itemObj = items.find((i) => i.item === itemName);
-				if (itemObj?.extraInventorySlots) {
-					char.inventory = Math.max(char.inventory - itemObj.extraInventorySlots, 2);
-					char.items = char.items.slice(0, char.inventory);
-				}
-
-				char.items = char.items.map((item, i) => (i === itemIndex ? '' : item));
-			}
-
-			if (char.pickedUpItems) {
-				char.pickedUpItems = char.pickedUpItems.filter((item) => item !== itemName);
-			}
-
-			if (itemUsesAmmo(itemName)) {
-				char.ammoTrackers = char.ammoTrackers.filter((t) => t.weaponName !== itemName);
-			}
-
-			const updatedCharacters = [...warbandData.characters];
-			updatedCharacters[i] = char;
-			warbandData.characters = updatedCharacters;
-
-			try {
-				const auth = getAuth();
-				await saveToFirestore(auth.currentUser, warbandData);
-
-				undoStore.setUndoAction({
-					characterIndex: i,
-					previousState,
-					warbandData: { ...warbandData },
-					description: `Dropped ${itemName}`
-				});
-			} catch (error) {
-				console.error('Failed to drop item', error);
-				alert('Failed to drop item. Please try again.');
-			}
+		try {
+			await warbandStore.dropItem(i, itemName, itemIndex);
+		} catch (error) {
+			console.error('Failed to drop item', error);
+			validationMessage = 'Failed to drop item. Please try again.';
 		}
 	};
 
-	const itemUsesAmmo = (itemName: string) => {
-		const item = items.find((i) => i.item === itemName);
-		return item && item.ammo !== undefined;
-	};
-
-	const getInitialAmmo = (itemName: string) => {
-		const item = items.find((i) => i.item === itemName);
-		return item?.ammo || 0;
-	};
-
-	const isAmmoOnlyItem = (itemName: string) => {
-		const item = items.find((i) => i.item === itemName);
-		return item && item.item === 'Ammo';
-	};
+	const itemUsesAmmo = (itemName: string) => doesItemUseAmmo(itemName, items);
+	const getInitialAmmo = (itemName: string) => domainInitialAmmo(itemName, items);
 
 	const useAmmo = async (weaponName: string, slotIndex: number) => {
 		const tracker = char.ammoTrackers.find(
 			(t) => t.weaponName === weaponName && t.slotIndex === slotIndex
 		);
-		if (tracker && tracker.currentAmmo > 0) {
-			const previousState = {
-				...char,
-				ammoTrackers: char.ammoTrackers.map((t) => ({ ...t })),
-				items: [...char.items],
-				feats: [...char.feats],
-				flaws: [...char.flaws],
-				pickedUpItems: [...(char.pickedUpItems || [])]
-			};
+		if (!tracker || tracker.currentAmmo <= 0) return;
 
-			const isLastAmmo = tracker.currentAmmo === 1;
-			const isPureAmmo = isAmmoOnlyItem(weaponName);
-
-			if (isLastAmmo && isPureAmmo) {
-				char.items = char.items.map((item, i) => (i === slotIndex ? '' : item));
-				char.pickedUpItems = (char.pickedUpItems || []).filter((item) => item !== weaponName);
-				char.ammoTrackers = char.ammoTrackers.filter(
-					(t) => !(t.weaponName === weaponName && t.slotIndex === slotIndex)
-				);
-			}
-
-			tracker.currentAmmo--;
-
-			const updatedCharacters = [...warbandData.characters];
-			updatedCharacters[i] = char;
-			warbandData.characters = updatedCharacters;
-
-			try {
-				const auth = getAuth();
-				await saveToFirestore(auth.currentUser, warbandData);
-
-				undoStore.setUndoAction({
-					characterIndex: i,
-					previousState,
-					warbandData: { ...warbandData },
-					description: `Used ammo for ${weaponName}`
-				});
-			} catch (error) {
-				console.error('Failed to save ammo change', error);
-				alert('Failed to save ammo change. Please try again.');
-			}
+		try {
+			await warbandStore.useAmmo(i, weaponName, slotIndex);
+		} catch (error) {
+			console.error('Failed to save ammo change', error);
+			validationMessage = 'Failed to save ammo change. Please try again.';
 		}
 	};
 
@@ -422,151 +237,42 @@
 		const tracker = char.ammoTrackers.find(
 			(t) => t.weaponName === weaponName && t.slotIndex === slotIndex
 		);
-		if (tracker && tracker.currentAmmo === 0) {
-			const previousState = {
-				...char,
-				ammoTrackers: char.ammoTrackers.map((t) => ({ ...t })),
-				items: [...char.items],
-				feats: [...char.feats],
-				flaws: [...char.flaws],
-				pickedUpItems: [...(char.pickedUpItems || [])]
-			};
+		if (!tracker || tracker.currentAmmo !== 0) return;
 
-			tracker.currentAmmo = getInitialAmmo(weaponName);
-
-			const updatedCharacters = [...warbandData.characters];
-			updatedCharacters[i] = char;
-			warbandData.characters = updatedCharacters;
-
-			try {
-				const auth = getAuth();
-				await saveToFirestore(auth.currentUser, warbandData);
-
-				undoStore.setUndoAction({
-					characterIndex: i,
-					previousState,
-					warbandData: { ...warbandData },
-					description: `Refilled ammo for ${weaponName}`
-				});
-			} catch (error) {
-				console.error('Failed to refill ammo', error);
-				alert('Failed to refill ammo. Please try again.');
-			}
+		try {
+			await warbandStore.refillAmmo(i, weaponName, slotIndex);
+		} catch (error) {
+			console.error('Failed to refill ammo', error);
+			validationMessage = 'Failed to refill ammo. Please try again.';
 		}
 	};
 
 	const reviveCharacter = async () => {
-		const previousState = { ...char };
-
-		char.hp = 1;
-
-		const updatedCharacters = [...warbandData.characters];
-		updatedCharacters[i] = char;
-		warbandData.characters = updatedCharacters;
-
 		try {
-			const auth = getAuth();
-			await saveToFirestore(auth.currentUser, warbandData);
-
-			undoStore.setUndoAction({
-				characterIndex: i,
-				previousState,
-				warbandData: { ...warbandData },
-				description: `Revived ${char.name}`
-			});
+			await warbandStore.reviveCharacter(i);
 		} catch (error) {
 			console.error('Failed to revive character', error);
-			alert('Failed to revive character. Please try again.');
+			validationMessage = 'Failed to revive character. Please try again.';
 		}
 	};
 
 	const addInjury = async (injuryName: string) => {
-		const previousState = { ...char };
+		if (char.injuries?.includes(injuryName)) return;
 
-		const newChar = { ...char };
-
-		if (!newChar.injuries) {
-			newChar.injuries = [];
-		}
-
-		if (!newChar.injuries.includes(injuryName)) {
-			const injuryObj = injuries.find((i) => i.name === injuryName);
-			if (injuryObj?.statModifiers?.extraInventorySlots) {
-				newChar.inventory += injuryObj.statModifiers.extraInventorySlots;
-				newChar.inventory = Math.max(2, newChar.inventory);
-
-				if (newChar.items.length > newChar.inventory) {
-					newChar.items = newChar.items.slice(0, newChar.inventory);
-				} else if (newChar.items.length < newChar.inventory) {
-					newChar.items = [
-						...newChar.items,
-						...Array(newChar.inventory - newChar.items.length).fill('')
-					];
-				}
-			}
-
-			newChar.injuries = [...newChar.injuries, injuryName];
-
-			const updatedCharacters = [...warbandData.characters];
-			updatedCharacters[i] = newChar;
-			warbandData.characters = updatedCharacters;
-
-			try {
-				const auth = getAuth();
-				await saveToFirestore(auth.currentUser, warbandData);
-
-				undoStore.setUndoAction({
-					characterIndex: i,
-					previousState,
-					warbandData: { ...warbandData },
-					description: `Added injury: ${injuryName}`
-				});
-			} catch (error) {
-				console.error('Failed to add injury', error);
-				alert('Failed to add injury. Please try again.');
-			}
+		try {
+			await warbandStore.addInjury(i, injuryName);
+		} catch (error) {
+			console.error('Failed to add injury', error);
+			validationMessage = 'Failed to add injury. Please try again.';
 		}
 	};
 
 	const removeInjury = async (injuryName: string) => {
-		const previousState = { ...char };
-
-		const newChar = { ...char };
-
-		const injuryObj = injuries.find((i) => i.name === injuryName);
-		if (injuryObj?.statModifiers?.extraInventorySlots) {
-			newChar.inventory -= injuryObj.statModifiers.extraInventorySlots;
-			newChar.inventory = Math.max(2, newChar.inventory);
-
-			if (newChar.items.length > newChar.inventory) {
-				newChar.items = newChar.items.slice(0, newChar.inventory);
-			} else if (newChar.items.length < newChar.inventory) {
-				newChar.items = [
-					...newChar.items,
-					...Array(newChar.inventory - newChar.items.length).fill('')
-				];
-			}
-		}
-
-		newChar.injuries = newChar.injuries.filter((injury) => injury !== injuryName);
-
-		const updatedCharacters = [...warbandData.characters];
-		updatedCharacters[i] = newChar;
-		warbandData.characters = updatedCharacters;
-
 		try {
-			const auth = getAuth();
-			await saveToFirestore(auth.currentUser, warbandData);
-
-			undoStore.setUndoAction({
-				characterIndex: i,
-				previousState,
-				warbandData: { ...warbandData },
-				description: `Removed injury: ${injuryName}`
-			});
+			await warbandStore.removeInjury(i, injuryName);
 		} catch (error) {
 			console.error('Failed to remove injury', error);
-			alert('Failed to remove injury. Please try again.');
+			validationMessage = 'Failed to remove injury. Please try again.';
 		}
 	};
 
@@ -575,7 +281,7 @@
 		if (!item) return false;
 		return (
 			(item.twoHanded && modifiedStats.weaponRestrictions === 'one-handed') ||
-			(char.isSpellcaster && isItemRestrictedForSpellcaster(itemName))
+			(char.isSpellcaster && isItemRestrictedForSpellcaster(itemName, items))
 		);
 	};
 
@@ -661,9 +367,14 @@
 				: ''}"
 		>
 			<div class="flex flex-wrap items-center gap-2">
-				<h3 class="jacquard-24-regular text-2xl font-bold underline sm:text-2xl md:text-2xl">
-					{char.name}
-				</h3>
+				<div class="flex flex-col">
+					<h3 class="jacquard-24-regular text-2xl font-bold underline sm:text-2xl md:text-2xl">
+						{char.name}
+					</h3>
+					{#if validationMessage}
+						<p class="text-xs text-red-400">{validationMessage}</p>
+					{/if}
+				</div>
 				{#if char.isSpellcaster}
 					<span
 						class="jacquard-24-regular whitespace-nowrap text-lg font-semibold text-purple-500 sm:text-lg"

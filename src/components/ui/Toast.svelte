@@ -2,6 +2,8 @@
 	import { fade, fly } from 'svelte/transition';
 	import { undoStore } from '$lib/stores/undoStore';
 	import Button from './Button.svelte';
+
+	let undoError = '';
 </script>
 
 {#if $undoStore}
@@ -13,6 +15,9 @@
 		<div
 			class="flex min-w-[300px] items-center justify-between gap-4 rounded-lg bg-purple-600 px-4 py-3 text-white shadow-lg"
 		>
+			{#if undoError}
+				<p class="text-xs text-yellow-200">{undoError}</p>
+			{/if}
 			<p
 				class="text-lg font-bold tracking-wide text-white [text-shadow:_1px_1px_0_rgb(0_0_0_/_40%)]"
 			>
@@ -23,9 +28,10 @@
 				onClick={async () => {
 					try {
 						await undoStore.undo();
+						undoError = '';
 					} catch (error) {
 						console.error('Failed to undo action', error);
-						alert('Failed to undo. Please try again.');
+						undoError = 'Failed to undo. Please try again.';
 					}
 				}}
 			>

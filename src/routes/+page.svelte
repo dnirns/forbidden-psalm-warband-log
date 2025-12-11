@@ -1,17 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { auth } from '$lib/firebase/firebase';
-	import { onAuthStateChanged, type User } from 'firebase/auth';
-	import { defaultCharacter, calculateModifiedStats } from '$lib/utils';
+	import type { User } from 'firebase/auth';
+	import { defaultCharacter, calculateModifiedStats } from '$domain/rules';
 	import { items, feats, flaws } from '$lib';
 
-	import {
-		signInWithGoogleService,
-		signOutService,
-		loadUserData,
-		setupRealtimeListener
-	} from '$lib/firebase/firebaseServices';
+	import { firebaseAuthAdapter } from '$lib/firebase';
+	import { createAuthApplicationService } from '$domain/application';
+	import { signInWithGoogleService, signOutService } from '$lib/firebase/firebaseServices';
 
 	import CharacterCard from '../components/character/CharacterCard.svelte';
 	import { type Character } from '$lib/types';
@@ -31,6 +27,7 @@
 	let currentCharacter: Character = defaultCharacter();
 
 	let unsubscribeFirestore: (() => void) | undefined;
+	const authService = createAuthApplicationService(firebaseAuthAdapter);
 
 	$: ({ data: warbandData, selectedIndex, currentCharacter } = $warbandStore);
 
@@ -50,19 +47,14 @@
 
 	onMount(() => {
 		if (browser) {
-			const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+			const unsubscribeAuth = authService.onChange(async (user) => {
 				currentUser = user;
 				loading = true;
 
 				if (user) {
 					try {
-						unsubscribeFirestore = await setupRealtimeListener(user, (data) => {
-							warbandStore.initialize(data);
-						});
-						const initialData = await loadUserData(user);
-						if (initialData) {
-							warbandStore.initialize(initialData);
-						}
+						unsubscribeFirestore = await warbandStore.listenToRemote(user.uid);
+						await warbandStore.load(user.uid);
 					} catch (error) {
 						console.error('Error loading user data:', error);
 					}
@@ -87,11 +79,10 @@
 
 	const handleSignInWithGoogle = async () => {
 		try {
-			const result = await signInWithGoogleService();
-			currentUser = result;
-			const data = await loadUserData(currentUser);
-			if (data) {
-				warbandStore.initialize(data);
+			const result = await authService.signInWithGoogle();
+			currentUser = result as User | null;
+			if (currentUser) {
+				await warbandStore.load(currentUser.uid);
 			}
 		} catch (error) {
 			console.error('Error signing in with Google:', error);
@@ -100,7 +91,7 @@
 
 	const handleSignOut = async () => {
 		try {
-			await signOutService();
+			await authService.signOut();
 			currentUser = null;
 			warbandStore.reset();
 		} catch (error) {
@@ -134,7 +125,6 @@
 							{items}
 							{char}
 							{i}
-							{warbandData}
 						/>
 					</div>
 				{/each}

@@ -7,17 +7,21 @@
 	import { injuries } from '$lib/data/injuries';
 	import items from '$lib/data/items';
 	import InvertedCrossSVG from '../icons/InvertedCrossSVG.svelte';
-	import { calculateCharacterCost, calculateTotalArmour, calculateModifiedStats } from '$lib/utils';
+	import {
+		calculateCharacterCost,
+		calculateTotalArmour,
+		calculateModifiedStats,
+		defaultCharacter
+	} from '$domain/rules';
 	import {
 		itemUsesAmmo,
 		getInitialAmmo,
 		updateInventory,
 		handleSpellcasterChange as handleSpellcasterChangeUtil,
 		isItemRestrictedForSpellcaster
-	} from '$lib/utils/characterUtils';
+	} from '$domain/rules';
 	import ScrollSelector from '../ui/ScrollSelector.svelte';
 	import { warbandStore } from '$lib/stores/warbandStore';
-	import { defaultCharacter } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { lockBodyScroll, unlockBodyScroll } from '$lib/utils/modalUtils';
 	import CloseButton from '../ui/CloseButton.svelte';
@@ -147,29 +151,7 @@
 	const handleStatChange = (event: Event, statKey: StatKey) => {
 		const target = event.target as HTMLSelectElement;
 		const newValue = parseInt(target.value, 10);
-		const newChar = { ...currentCharacter };
-		newChar[statKey] = newValue;
-
-		if (statKey === 'toughness') {
-			const newBaseHP = 8 + newValue;
-			const newMaxHP = newBaseHP + modifiedStats.hp;
-
-			if (selectedIndex === -1) {
-				newChar.hp = newMaxHP;
-			} else if (newChar.hp > newMaxHP) {
-				newChar.hp = newMaxHP;
-			}
-		} else if (statKey === 'strength') {
-			const newBaseInventory = 5 + newValue;
-			const newMaxInventory = newBaseInventory + modifiedStats.equipmentSlots;
-			if (selectedIndex === -1) {
-				updateInventory(newChar, newMaxInventory);
-			} else if (newChar.inventory > newMaxInventory) {
-				updateInventory(newChar, newMaxInventory);
-			}
-		}
-
-		warbandStore.updateCurrentCharacter(newChar);
+		warbandStore.updateStatAndInventory(statKey, newValue);
 	};
 
 	const updateHP = async (newValue: number) => {
@@ -227,33 +209,27 @@
 			return;
 		}
 
-		const newChar = { ...currentCharacter };
+		if (shouldRefund) {
+			warbandStore.removeItemWithRefund(itemToDelete, originalItems);
+		} else {
+			const newChar = { ...currentCharacter };
 
-		const itemObj = items.find((i) => i.item === itemToDelete);
-		if (itemObj?.extraInventorySlots) {
-			newChar.inventory = Math.max(newChar.inventory - itemObj.extraInventorySlots, 2);
-		}
+			const itemObj = items.find((i) => i.item === itemToDelete);
+			if (itemObj?.extraInventorySlots) {
+				newChar.inventory = Math.max(newChar.inventory - itemObj.extraInventorySlots, 2);
+			}
 
-		newChar.items = newChar.items.map((item, i) => (i === index ? '' : item));
+			newChar.items = newChar.items.map((item, i) => (i === index ? '' : item));
 
-		if (newChar.pickedUpItems) {
-			newChar.pickedUpItems = newChar.pickedUpItems.filter((item) => item !== itemToDelete);
-		}
+			if (newChar.pickedUpItems) {
+				newChar.pickedUpItems = newChar.pickedUpItems.filter((item) => item !== itemToDelete);
+			}
 
-		if (itemUsesAmmo(itemToDelete, items)) {
-			newChar.ammoTrackers = newChar.ammoTrackers.filter((t) => t.weaponName !== itemToDelete);
-		}
+			if (itemUsesAmmo(itemToDelete, items)) {
+				newChar.ammoTrackers = newChar.ammoTrackers.filter((t) => t.weaponName !== itemToDelete);
+			}
 
-		warbandStore.updateCurrentCharacter(newChar);
-
-		if (
-			shouldRefund &&
-			itemObj &&
-			typeof itemObj.cost === 'number' &&
-			itemObj.cost > 0 &&
-			originalItems.includes(itemToDelete)
-		) {
-			warbandStore.updateGold(warbandData.gold + itemObj.cost);
+			warbandStore.updateCurrentCharacter(newChar);
 		}
 	};
 
@@ -288,23 +264,8 @@
 		const select = e.target as HTMLSelectElement;
 		const selectedFeat = select.value;
 		if (selectedFeat) {
-			const feat = feats.find((f) => f.name === selectedFeat);
-			if (feat) {
-				if (feat.statModifiers?.extraInventorySlots) {
-					const newInventory = currentCharacter.inventory + feat.statModifiers.extraInventorySlots;
-					currentCharacter.inventory = Math.max(2, newInventory);
-					if (currentCharacter.items.length > newInventory) {
-						currentCharacter.items = currentCharacter.items.slice(0, newInventory);
-					} else if (currentCharacter.items.length < newInventory) {
-						currentCharacter.items = [
-							...currentCharacter.items,
-							...Array(newInventory - currentCharacter.items.length).fill('')
-						];
-					}
-				}
-				currentCharacter.feats = [...currentCharacter.feats, selectedFeat];
-				featText = '';
-			}
+			warbandStore.applyModifier(selectedFeat, 'feat');
+			featText = '';
 		}
 	};
 
@@ -312,23 +273,8 @@
 		const select = e.target as HTMLSelectElement;
 		const selectedFlaw = select.value;
 		if (selectedFlaw) {
-			const flaw = flaws.find((f) => f.name === selectedFlaw);
-			if (flaw) {
-				if (flaw.statModifiers?.extraInventorySlots) {
-					const newInventory = currentCharacter.inventory + flaw.statModifiers.extraInventorySlots;
-					currentCharacter.inventory = Math.max(2, newInventory);
-					if (currentCharacter.items.length > newInventory) {
-						currentCharacter.items = currentCharacter.items.slice(0, newInventory);
-					} else if (currentCharacter.items.length < newInventory) {
-						currentCharacter.items = [
-							...currentCharacter.items,
-							...Array(newInventory - currentCharacter.items.length).fill('')
-						];
-					}
-				}
-				currentCharacter.flaws = [...currentCharacter.flaws, selectedFlaw];
-				flawText = '';
-			}
+			warbandStore.applyModifier(selectedFlaw, 'flaw');
+			flawText = '';
 		}
 	};
 
@@ -336,48 +282,27 @@
 		const select = e.target as HTMLSelectElement;
 		const selectedInjury = select.value;
 		if (selectedInjury) {
-			const injury = injuries.find((i) => i.name === selectedInjury);
-			if (injury) {
-				if (injury.statModifiers?.extraInventorySlots) {
-					const newInventory =
-						currentCharacter.inventory + injury.statModifiers.extraInventorySlots;
-					currentCharacter.inventory = Math.max(2, newInventory);
-					if (currentCharacter.items.length > newInventory) {
-						currentCharacter.items = currentCharacter.items.slice(0, newInventory);
-					} else if (currentCharacter.items.length < newInventory) {
-						currentCharacter.items = [
-							...currentCharacter.items,
-							...Array(newInventory - currentCharacter.items.length).fill('')
-						];
-					}
-				}
-				currentCharacter.injuries = [...currentCharacter.injuries, selectedInjury];
-				injuryText = '';
-			}
+			warbandStore.applyModifier(selectedInjury, 'injury');
+			injuryText = '';
 		}
 	};
 
-	const handleSpellcasterChange = (checked: boolean) => {
-		const originalCharacter = selectedIndex !== -1 ? warbandData.characters[selectedIndex] : null;
-		const result = handleSpellcasterChangeUtil(currentCharacter, originalCharacter, checked);
-		if (result.success) {
-			warbandStore.updateCurrentCharacter({
-				isSpellcaster: checked,
-				items: [...currentCharacter.items]
-			});
+	let spellcasterMessage = '';
 
-			if (result.removedItems.length > 0) {
-				if (result.refundAmount > 0) {
-					warbandStore.updateGold(warbandData.gold + result.refundAmount);
-				}
-				const itemMessages = result.removedItems.map((item) => {
-					const message = `${item.name} was removed as it is a restricted item for Spellcasters`;
-					return item.cost > 0 ? `${message} (${item.cost} gold refunded)` : message;
-				});
-				const refundMessage =
-					result.refundAmount > 0 ? `\n\nTotal gold refunded: ${result.refundAmount}` : '';
-				alert(itemMessages.join('\n') + refundMessage);
-			}
+	const handleSpellcasterChange = (checked: boolean) => {
+		const result = warbandStore.handleSpellcasterToggle(checked);
+		if (!result) return;
+
+		if (result.removedItems.length > 0) {
+			const itemMessages = result.removedItems.map((item) => {
+				const message = `${item.name} was removed as it is a restricted item for Spellcasters`;
+				return item.cost > 0 ? `${message} (${item.cost} gold refunded)` : message;
+			});
+			const refundMessage =
+				result.refundAmount > 0 ? ` Total gold refunded: ${result.refundAmount}.` : '';
+			spellcasterMessage = `${itemMessages.join(' ')}${refundMessage}`;
+		} else {
+			spellcasterMessage = '';
 		}
 	};
 
@@ -417,7 +342,7 @@
 			unlockBodyScroll();
 		} catch (error) {
 			console.error('Error saving character', error);
-			alert('Error saving character. Please try again.');
+			spellcasterMessage = 'Error saving character. Please try again.';
 		}
 	};
 
@@ -450,6 +375,9 @@
 				{selectedIndex === -1 ? 'Add Character' : 'Edit Character'}
 			</h2>
 			<form on:submit|preventDefault={handleSubmit} class="lora space-y-3 sm:space-y-4">
+				{#if spellcasterMessage}
+					<p class="text-sm text-green-700">{spellcasterMessage}</p>
+				{/if}
 				<div>
 					<p class="jacquard-24-regular text-xl font-bold text-black sm:text-2xl">Name:</p>
 					<input
@@ -773,13 +701,14 @@
 														value={option.item}
 														disabled={option.cost > availableGold ||
 															(currentCharacter.isSpellcaster &&
-																isItemRestrictedForSpellcaster(option.item))}
+																isItemRestrictedForSpellcaster(option.item, items))}
 													>
 														{option.item} ({option.cost} Gold)
 														{#if option.ammo !== undefined}
 															- {option.ammo} Ammo
 														{/if}
-														{#if currentCharacter.isSpellcaster && isItemRestrictedForSpellcaster(option.item)}
+														{#if currentCharacter.isSpellcaster &&
+															isItemRestrictedForSpellcaster(option.item, items)}
 															(Restricted for Spellcasters)
 														{/if}
 													</option>

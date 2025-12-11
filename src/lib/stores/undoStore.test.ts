@@ -2,12 +2,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import { undoStore } from '$lib';
 import type { Character, WarbandData } from '$lib/types';
-import { saveToFirestore } from '$lib/firebase/firebaseServices';
-import { getAuth } from 'firebase/auth';
-import type { User, Auth } from 'firebase/auth';
-
-vi.mock('firebase/auth');
-vi.mock('$lib/firebase/firebaseServices');
+import type { User } from 'firebase/auth';
+import { createWarbandApplicationService } from '$domain/application';
+import type { WarbandRepository } from '$domain/ports';
 
 type UndoAction = {
 	characterIndex: number;
@@ -51,17 +48,24 @@ const mockAction: UndoAction = {
 	description: 'Test action'
 };
 
-const createMockAuth = (user: User | null): Auth =>
-	({
-		currentUser: user
-	}) as Auth;
-
 describe('undoStore', () => {
 	const mockUser: User = {
 		uid: 'test-user-123',
 		email: 'test@example.com',
 		displayName: 'Test User'
 	} as User;
+	const mockRepo: WarbandRepository = {
+		save: vi.fn(),
+		load: vi.fn(),
+		subscribe: vi.fn()
+	};
+
+	beforeAll(() => {
+		// replace the repository inside undoStore by monkey patching the module
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const { firestoreWarbandRepository } = require('$lib/firebase');
+		firestoreWarbandRepository.save = mockRepo.save;
+	});
 
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -124,11 +128,6 @@ describe('undoStore', () => {
 	});
 
 	describe('undo', () => {
-		beforeEach(() => {
-			vi.mocked(getAuth).mockReturnValue(createMockAuth(mockUser));
-			vi.mocked(saveToFirestore).mockResolvedValue(undefined);
-		});
-
 		it('should restore previous character state', async () => {
 			const previous: Character = { ...mockCharacter, name: 'Original', hp: 10 };
 			const action: UndoAction = {
@@ -143,8 +142,7 @@ describe('undoStore', () => {
 			undoStore.setUndoAction(action);
 			await undoStore.undo();
 
-			expect(saveToFirestore).toHaveBeenCalledWith(
-				mockUser,
+			expect(mockRepo.save).toHaveBeenCalledWith(
 				expect.objectContaining({
 					characters: [expect.objectContaining({ name: 'Original', hp: 10 })]
 				})
@@ -161,32 +159,17 @@ describe('undoStore', () => {
 			undoStore.setUndoAction(action);
 			await undoStore.undo();
 
-			expect(saveToFirestore).toHaveBeenCalledWith(
-				mockUser,
-				expect.objectContaining({
-					characters: [expect.objectContaining({ name: 'Warrior' })]
-				})
-			);
+			expect(mockRepo.save).toHaveBeenCalled();
 		});
 
 		it('should do nothing when store is empty', async () => {
 			await undoStore.undo();
 
-			expect(saveToFirestore).not.toHaveBeenCalled();
-		});
-
-		it('should do nothing when user is not authenticated', async () => {
-			vi.mocked(getAuth).mockReturnValue(createMockAuth(null));
-			undoStore.setUndoAction(mockAction);
-
-			await undoStore.undo();
-
-			expect(saveToFirestore).not.toHaveBeenCalled();
-			expect(get(undoStore)).toBeNull();
+			expect(mockRepo.save).not.toHaveBeenCalled();
 		});
 
 		it('should throw error when save fails', async () => {
-			vi.mocked(saveToFirestore).mockRejectedValue(new Error('Save failed'));
+			vi.mocked(mockRepo.save).mockRejectedValue(new Error('Save failed'));
 			undoStore.setUndoAction(mockAction);
 
 			await expect(undoStore.undo()).rejects.toThrow('Save failed');

@@ -1,6 +1,5 @@
-import type { Character } from '$lib/types';
-import type { Item } from '$lib/types';
-import items from '$lib/data/items';
+import type { Character, Item } from '$lib/types';
+import { MIN_INVENTORY } from './characterStats';
 
 export const itemUsesAmmo = (itemName: string, items: Item[]): boolean => {
 	const item = items.find((i) => i.item === itemName);
@@ -20,10 +19,10 @@ export const updateInventory = (character: Character, newVal: number) => {
 	} else if (newVal < currentLength) {
 		character.items = character.items.slice(0, newVal);
 	}
-	character.inventory = newVal;
+	character.inventory = Math.max(MIN_INVENTORY, newVal);
 };
 
-export const isItemRestrictedForSpellcaster = (itemName: string) => {
+export const isItemRestrictedForSpellcaster = (itemName: string, items: Item[]) => {
 	const item = items.find((i) => i.item === itemName);
 	return itemName === 'Heavy Armour' || itemName === 'Shield' || (item?.twoHanded ?? false);
 };
@@ -31,10 +30,13 @@ export const isItemRestrictedForSpellcaster = (itemName: string) => {
 export const handleSpellcasterChange = (
 	character: Character,
 	originalCharacter: Character | null,
-	checked: boolean
+	checked: boolean,
+	items: Item[]
 ) => {
 	if (checked) {
-		const restrictedItems = character.items.filter(isItemRestrictedForSpellcaster);
+		const restrictedItems = character.items.filter((item) =>
+			isItemRestrictedForSpellcaster(item, items)
+		);
 		let refundAmount = 0;
 		const removedItems: { name: string; cost: number }[] = [];
 
@@ -55,7 +57,7 @@ export const handleSpellcasterChange = (
 		}
 
 		character.items = character.items.map((item) =>
-			isItemRestrictedForSpellcaster(item) ? '' : item
+			isItemRestrictedForSpellcaster(item, items) ? '' : item
 		);
 
 		character.isSpellcaster = true;

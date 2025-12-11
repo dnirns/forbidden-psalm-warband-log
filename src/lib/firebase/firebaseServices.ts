@@ -2,7 +2,7 @@ import { auth, db, googleProvider } from '$lib/firebase';
 import { signInWithPopup, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import type { Character, WarbandData } from '$lib/types';
-import { defaultCharacter } from '$lib/utils';
+import { defaultCharacter } from '$domain/rules';
 
 export const signInWithGoogleService = async (): Promise<User | null> => {
 	const result = await signInWithPopup(auth, googleProvider);
@@ -85,10 +85,12 @@ export const saveToFirestore = async (
 	}
 };
 
-export const loadUserData = async (currentUser: User | null): Promise<WarbandData | null> => {
+export const loadUserData = async (currentUser: User | { uid: string } | null): Promise<WarbandData | null> => {
 	if (!currentUser) return null;
+	const uid = typeof (currentUser as any).uid === 'string' ? (currentUser as any).uid : '';
+	if (!uid) return null;
 
-	const userDocRef = doc(db, 'warbands', currentUser.uid);
+	const userDocRef = doc(db, 'warbands', uid);
 	const docSnap = await getDoc(userDocRef);
 
 	if (docSnap.exists()) {
@@ -100,10 +102,11 @@ export const loadUserData = async (currentUser: User | null): Promise<WarbandDat
 };
 
 export const setupRealtimeListener = async (
-	currentUser: User,
+	currentUser: User | { uid: string },
 	callback: (data: WarbandData) => void
 ): Promise<Unsubscribe> => {
-	const userDocRef = doc(db, 'warbands', currentUser.uid);
+	const uid = typeof (currentUser as any).uid === 'string' ? (currentUser as any).uid : '';
+	const userDocRef = doc(db, 'warbands', uid);
 	return onSnapshot(userDocRef, (docSnap) => {
 		if (docSnap.exists()) {
 			const data = docSnap.data() as StoredWarband;

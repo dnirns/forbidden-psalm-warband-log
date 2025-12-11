@@ -9,13 +9,16 @@
 	export let step = 1;
 	export let disabled = false;
 
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+
 	const handleIncrement = async () => {
 		if (value + step <= maxValue) {
 			try {
 				await onUpdate(value + step);
 			} catch (error) {
 				console.error(`Failed to increment ${label}`, error);
-				alert(`Failed to increment ${label}. Please try again.`);
+				dispatch('error', { message: `Failed to increment ${label}. Please try again.` });
 			}
 		}
 	};
@@ -26,7 +29,7 @@
 				await onUpdate(value - step);
 			} catch (error) {
 				console.error(`Failed to decrement ${label}`, error);
-				alert(`Failed to decrement ${label}. Please try again.`);
+				dispatch('error', { message: `Failed to decrement ${label}. Please try again.` });
 			}
 		}
 	};
