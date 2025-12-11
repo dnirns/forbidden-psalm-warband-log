@@ -1,7 +1,11 @@
-import type { Character, Item, WarbandData } from '$lib/types';
+import type { Character, Item } from '$domain/models';
 import { handleSpellcasterChange } from '$domain/rules';
 import { items as domainItems } from '$domain/data';
-import { feats as domainFeats, flaws as domainFlaws, injuries as domainInjuries } from '$domain/data';
+import {
+	feats as domainFeats,
+	flaws as domainFlaws,
+	injuries as domainInjuries
+} from '$domain/data';
 
 type SpellcasterChangeResult = ReturnType<typeof handleSpellcasterChange>;
 

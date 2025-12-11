@@ -24,13 +24,15 @@ export default defineConfig({
 		},
 		alias: {
 			$lib: '/src/lib',
-			$domain: '/src/domain'
+			$domain: '/src/domain',
+			$infrastructure: '/src/infrastructure'
 		}
 	},
 	resolve: {
 		conditions: ['browser'],
 		alias: {
-			$domain: '/src/domain'
+			$domain: '/src/domain',
+			$infrastructure: '/src/infrastructure'
 		}
 	},
 	ssr: {

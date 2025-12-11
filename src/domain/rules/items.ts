@@ -1,4 +1,4 @@
-import type { Character, Item } from '$lib/types';
+import type { Character, Item } from '$domain/models';
 import { MIN_INVENTORY } from './characterStats';
 
 export const itemUsesAmmo = (itemName: string, items: Item[]): boolean => {

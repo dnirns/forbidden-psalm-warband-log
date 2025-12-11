@@ -5,6 +5,12 @@ import type { Character, WarbandData } from '$lib/types';
 import type { User } from 'firebase/auth';
 import { createWarbandApplicationService } from '$domain/application';
 import type { WarbandRepository } from '$domain/ports';
+import { firestoreWarbandRepository } from '$infrastructure/firebase';
+import { saveToFirestore } from '$infrastructure/firebase/firebaseServices';
+
+vi.mock('$infrastructure/firebase/firebaseServices', () => ({
+	saveToFirestore: vi.fn()
+}));
 
 type UndoAction = {
 	characterIndex: number;
@@ -62,8 +68,6 @@ describe('undoStore', () => {
 
 	beforeAll(() => {
 		// replace the repository inside undoStore by monkey patching the module
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const { firestoreWarbandRepository } = require('$lib/firebase');
 		firestoreWarbandRepository.save = mockRepo.save;
 	});
 

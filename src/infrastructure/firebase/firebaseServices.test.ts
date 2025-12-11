@@ -4,17 +4,17 @@ import {
 	signOutService,
 	saveToFirestore,
 	loadUserData,
-	setupRealtimeListener,
-	defaultCharacter
-} from '$lib';
+	setupRealtimeListener
+} from './firebaseServices';
+import { defaultCharacter } from '$domain/rules';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import type { WarbandData, Character } from '$lib';
+import type { WarbandData, Character } from '$domain/models';
 
 vi.mock('firebase/auth');
 vi.mock('firebase/firestore');
-vi.mock('$lib/firebase', () => ({
+vi.mock('./firebase', () => ({
 	auth: {},
 	db: {},
 	googleProvider: {}

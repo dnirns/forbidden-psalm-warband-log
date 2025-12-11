@@ -1,4 +1,4 @@
-import type { WarbandData } from '$lib/types';
+import type { WarbandData } from '$domain/models';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export interface WarbandRepository {

@@ -1,4 +1,4 @@
-import type { Character, Item, WarbandData } from '$lib/types';
+import type { Character, Item, WarbandData } from '$domain/models';
 import { calculateCharacterCost } from './characterStats';
 
 export const calculateGoldDifference = (

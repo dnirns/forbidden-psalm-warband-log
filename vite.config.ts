@@ -6,7 +6,8 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	resolve: {
 		alias: {
-			$domain: path.resolve('./src/domain')
+			$domain: path.resolve('./src/domain'),
+			$infrastructure: path.resolve('./src/infrastructure')
 		}
 	}
 });

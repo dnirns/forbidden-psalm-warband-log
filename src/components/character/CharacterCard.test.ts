@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import type { Character, WarbandData, Item } from '$lib/types';
 import { getAuth, type Auth } from 'firebase/auth';
-import { saveToFirestore } from '$lib/firebase';
+import { saveToFirestore } from '$infrastructure/firebase';
 
-// @ts-expect-error - Svelte component import
+// Svelte component import
 import CharacterCard from './CharacterCard.svelte';
 
 vi.mock('firebase/auth');
-vi.mock('$lib/firebase');
+vi.mock('$infrastructure/firebase');
 vi.mock('$lib/audio', () => ({
 	useAudio: () => ({ play: vi.fn() })
 }));

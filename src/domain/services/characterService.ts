@@ -1,5 +1,4 @@
-import type { Character, WarbandData } from '$lib/types';
-import type { Item } from '$lib/types';
+import type { Character, Item, WarbandData } from '$domain/models';
 import { MIN_INVENTORY, itemUsesAmmo, getInitialAmmo } from '$domain/rules';
 import { items as domainItems, scrolls as domainScrolls, injuries as domainInjuries } from '$domain/data';
 

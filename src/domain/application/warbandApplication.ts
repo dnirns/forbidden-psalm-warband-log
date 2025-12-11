@@ -1,5 +1,5 @@
 import type { WarbandRepository } from '$domain/ports';
-import type { WarbandData } from '$lib/types';
+import type { WarbandData } from '$domain/models';
 
 export class WarbandApplicationService {
 	constructor(private repository: WarbandRepository) {}

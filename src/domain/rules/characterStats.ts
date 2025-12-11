@@ -1,4 +1,4 @@
-import type { Character, FeatOrFlaw, Item } from '$lib/types';
+import type { Character, FeatOrFlaw, Item } from '$domain/models';
 import { injuries } from '$domain/data';
 
 type ModifiedStats = {

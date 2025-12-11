@@ -23,7 +23,7 @@ import {
 	applyModifier
 } from '$domain/services/characterEditorService';
 import { createWarbandApplicationService } from '$domain/application';
-import { firestoreWarbandRepository } from '$lib/firebase/firestoreWarbandRepository';
+import { firestoreWarbandRepository } from '$infrastructure/firebase/firestoreWarbandRepository';
 
 type WarbandStore = {
 	data: WarbandData;

@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import type { WarbandData, Character } from '$lib/types';
 
-vi.mock('$lib/firebase/firebaseServices');
-vi.mock('$lib/firebase/firebase', () => ({ auth: { currentUser: null } }));
+vi.mock('$infrastructure/firebase/firebaseServices');
+vi.mock('$infrastructure/firebase/firebase', () => ({ auth: { currentUser: null } }));
 vi.mock('$lib/data/items', () => ({ default: [] }));
 vi.mock('$lib/stores/undoStore', () => ({ undoStore: { setUndoAction: vi.fn() } }));
-vi.mock('$lib/utils', () => ({
+vi.mock('$domain/rules', () => ({
 	defaultCharacter: () => ({
 		name: '',
 		hp: 8,
@@ -27,11 +27,14 @@ vi.mock('$lib/utils', () => ({
 		pickedUpItems: [],
 		ammoTrackers: []
 	}),
-	calculateCharacterCost: vi.fn(() => 10)
+	calculateCharacterCost: vi.fn(() => 10),
+	calculateGoldDifference: vi.fn(() => 0)
 }));
 
-const { saveToFirestore } = await import('$lib/firebase/firebaseServices');
-const { defaultCharacter, calculateCharacterCost } = await import('$lib/utils');
+const { saveToFirestore } = await import('$infrastructure/firebase/firebaseServices');
+const { defaultCharacter, calculateCharacterCost, calculateGoldDifference } = await import(
+	'$domain/rules'
+);
 const { undoStore } = await import('$lib/stores/undoStore');
 
 describe('warbandStore', () => {
@@ -120,7 +123,7 @@ describe('warbandStore', () => {
 		});
 
 		it('should deduct gold and prevent negative', async () => {
-			vi.mocked(calculateCharacterCost).mockReturnValue(30);
+			vi.mocked(calculateGoldDifference).mockReturnValue(30);
 			warbandStore.initialize(createData({ gold: 20 }));
 			await warbandStore.saveCharacter(createCharacter(), -1);
 
