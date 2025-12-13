@@ -152,20 +152,19 @@ const createWarbandStore = () => {
 		},
 
 		pickUpItem: async (index: number, slotIndex: number, itemName: string) => {
-			let lastError = '';
-			await applyCharacterMutation(
-				index,
-				(character) => {
-					const result = pickUpItemMutation(character, slotIndex, itemName);
-					if (result.error) {
-						lastError = result.error;
-						return character;
-					}
-					return result.character;
-				},
-				`Picked up ${itemName}`
-			);
-			return lastError ? { error: lastError } : { success: true as const };
+			const store = get({ subscribe });
+			const character = store.data.characters[index];
+			if (!character) {
+				return { success: true as const };
+			}
+
+			const result = pickUpItemMutation(character, slotIndex, itemName);
+			if (result.error) {
+				return { error: result.error };
+			}
+
+			await applyCharacterMutation(index, () => result.character, `Picked up ${itemName}`);
+			return { success: true as const };
 		},
 
 		dropItem: async (index: number, itemName: string, slotIndex?: number) => {
