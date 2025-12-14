@@ -5,7 +5,7 @@
 	import { defaultCharacter, calculateModifiedStats } from '$domain/rules';
 	import { items, feats, flaws } from '$lib';
 
-	import { firebaseAuthAdapter, signInWithGoogleService, signOutService } from '$infrastructure/firebase';
+	import { firebaseAuthAdapter } from '$infrastructure/firebase';
 	import { createAuthApplicationService } from '$domain/application';
 
 	import CharacterCard from '../components/character/CharacterCard.svelte';
