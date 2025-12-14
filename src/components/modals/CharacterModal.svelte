@@ -16,8 +16,6 @@
 	import {
 		itemUsesAmmo,
 		getInitialAmmo,
-		updateInventory,
-		handleSpellcasterChange as handleSpellcasterChangeUtil,
 		isItemRestrictedForSpellcaster
 	} from '$domain/rules';
 	import ScrollSelector from '../ui/ScrollSelector.svelte';
@@ -122,32 +120,6 @@
 
 	type StatKey = 'agility' | 'presence' | 'strength' | 'toughness';
 
-	const handleStrengthChange = (event: Event) => {
-		const target = event.target as HTMLSelectElement;
-		const newStrength = parseInt(target.value, 10);
-
-		const newChar = { ...currentCharacter };
-		newChar.strength = newStrength;
-
-		const newBaseInventory = 5 + newStrength;
-		const newMaxInventory = newBaseInventory + modifiedStats.equipmentSlots;
-
-		newChar.inventory = newMaxInventory;
-
-		newChar.inventory = Math.max(2, newChar.inventory);
-
-		if (newChar.items.length > newChar.inventory) {
-			newChar.items = newChar.items.slice(0, newChar.inventory);
-		} else if (newChar.items.length < newChar.inventory) {
-			newChar.items = [
-				...newChar.items,
-				...Array(newChar.inventory - newChar.items.length).fill('')
-			];
-		}
-
-		warbandStore.updateCurrentCharacter(newChar);
-	};
-
 	const handleStatChange = (event: Event, statKey: StatKey) => {
 		const target = event.target as HTMLSelectElement;
 		const newValue = parseInt(target.value, 10);
@@ -163,102 +135,28 @@
 	const handleItemSelect = (event: Event, index: number) => {
 		const target = event.target as HTMLSelectElement;
 		const newItem = target.value;
-		const oldItem = currentCharacter.items[index];
-
-		const newChar = { ...currentCharacter };
-
-		let newAmmoTrackers = [...newChar.ammoTrackers];
-		if (oldItem && itemUsesAmmo(oldItem, items)) {
-			newAmmoTrackers = newAmmoTrackers.filter((t) => t.weaponName !== oldItem);
-		}
-		if (newItem && itemUsesAmmo(newItem, items)) {
-			newAmmoTrackers.push({
-				weaponName: newItem,
-				slotIndex: index,
-				currentAmmo: getInitialAmmo(newItem, items)
-			});
-		}
-		newChar.ammoTrackers = newAmmoTrackers;
-
-		const oldItemObj = items.find((i) => i.item === oldItem);
-		const newItemObj = items.find((i) => i.item === newItem);
-
-		if (oldItemObj?.extraInventorySlots) {
-			newChar.inventory = Math.max(newChar.inventory - oldItemObj.extraInventorySlots, 2);
-		}
-
-		if (newItemObj?.extraInventorySlots) {
-			newChar.inventory = newChar.inventory + newItemObj.extraInventorySlots;
-		}
-
-		const newItems = [...newChar.items];
-		newItems[index] = newItem;
-		newChar.items = newItems.slice(0, newChar.inventory);
-
-		if (!newChar.pickedUpItems) {
-			newChar.pickedUpItems = [];
-		}
-
-		warbandStore.updateCurrentCharacter(newChar);
+		warbandStore.setItemForCurrentCharacter(index, newItem);
 	};
 
 	const deleteItem = (index: number, shouldRefund: boolean = false) => {
 		const itemToDelete = currentCharacter.items[index];
 
-		if (itemToDelete === '[Clean Scroll Slot]' || itemToDelete === '[Unclean Scroll Slot]') {
+		if (
+			!itemToDelete ||
+			itemToDelete === '[Clean Scroll Slot]' ||
+			itemToDelete === '[Unclean Scroll Slot]'
+		) {
 			return;
 		}
 
 		if (shouldRefund) {
-			warbandStore.removeItemWithRefund(itemToDelete, originalItems);
+			warbandStore.removeItemWithRefund(itemToDelete, originalItems, index);
 		} else {
-			const newChar = { ...currentCharacter };
-
-			const itemObj = items.find((i) => i.item === itemToDelete);
-			if (itemObj?.extraInventorySlots) {
-				newChar.inventory = Math.max(newChar.inventory - itemObj.extraInventorySlots, 2);
-			}
-
-			newChar.items = newChar.items.map((item, i) => (i === index ? '' : item));
-
-			if (newChar.pickedUpItems) {
-				newChar.pickedUpItems = newChar.pickedUpItems.filter((item) => item !== itemToDelete);
-			}
-
-			if (itemUsesAmmo(itemToDelete, items)) {
-				newChar.ammoTrackers = newChar.ammoTrackers.filter((t) => t.weaponName !== itemToDelete);
-			}
-
-			warbandStore.updateCurrentCharacter(newChar);
+			warbandStore.removeItemFromCurrent(index);
 		}
 	};
 
-	const dropItem = (index: number) => {
-		const itemToDrop = currentCharacter.items[index];
-
-		if (itemToDrop === '[Clean Scroll Slot]' || itemToDrop === '[Unclean Scroll Slot]') {
-			return;
-		}
-
-		const newChar = { ...currentCharacter };
-
-		const itemObj = items.find((i) => i.item === itemToDrop);
-		if (itemObj?.extraInventorySlots) {
-			newChar.inventory = Math.max(newChar.inventory - itemObj.extraInventorySlots, 2);
-		}
-
-		newChar.items = newChar.items.map((item, i) => (i === index ? '' : item));
-
-		if (newChar.pickedUpItems) {
-			newChar.pickedUpItems = newChar.pickedUpItems.filter((item) => item !== itemToDrop);
-		}
-
-		if (itemUsesAmmo(itemToDrop, items)) {
-			newChar.ammoTrackers = newChar.ammoTrackers.filter((t) => t.weaponName !== itemToDrop);
-		}
-
-		warbandStore.updateCurrentCharacter(newChar);
-	};
+	const dropItem = (index: number) => deleteItem(index, false);
 
 	const handleFeatChange = (e: Event) => {
 		const select = e.target as HTMLSelectElement;
@@ -285,6 +183,18 @@
 			warbandStore.applyModifier(selectedInjury, 'injury');
 			injuryText = '';
 		}
+	};
+
+	const removeFeat = (featName: string) => {
+		warbandStore.removeModifier(featName, 'feat');
+	};
+
+	const removeFlaw = (flawName: string) => {
+		warbandStore.removeModifier(flawName, 'flaw');
+	};
+
+	const removeInjuryFromEditor = (injuryName: string) => {
+		warbandStore.removeModifier(injuryName, 'injury');
 	};
 
 	let spellcasterMessage = '';
@@ -441,10 +351,7 @@
 							<select
 								value={currentCharacter[stat.key as keyof Character]}
 								class="lora w-full rounded border border-gray-300 bg-white px-3 py-2 text-base text-black focus:outline-none focus:ring-2 focus:ring-black"
-								on:change={(e) =>
-									stat.key === 'strength'
-										? handleStrengthChange(e)
-										: handleStatChange(e, stat.key as StatKey)}
+								on:change={(e) => handleStatChange(e, stat.key as StatKey)}
 							>
 								{#each statValues as value}
 									<option {value}>{value}</option>
@@ -640,8 +547,16 @@
 
 				{#if currentCharacter.isSpellcaster}
 					<div class="space-y-4">
-						<ScrollSelector {currentCharacter} scrollType="clean" slotIndex={0} />
-						<ScrollSelector {currentCharacter} scrollType="unclean" slotIndex={1} />
+						<ScrollSelector
+							scrollType="clean"
+							selectedScroll={currentCharacter.items[0]}
+							onSelect={(scrollName) => warbandStore.selectScroll('clean', scrollName)}
+						/>
+						<ScrollSelector
+							scrollType="unclean"
+							selectedScroll={currentCharacter.items[1]}
+							onSelect={(scrollName) => warbandStore.selectScroll('unclean', scrollName)}
+						/>
 					</div>
 				{/if}
 
@@ -737,25 +652,7 @@
 										<button
 											type="button"
 											class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-400 text-xl font-bold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
-											on:click={() => {
-												const newChar = { ...currentCharacter };
-												const featName = feat;
-												const featObj = feats.find((f) => f.name === featName);
-												if (featObj?.statModifiers?.extraInventorySlots) {
-													newChar.inventory -= featObj.statModifiers.extraInventorySlots;
-													newChar.inventory = Math.max(2, newChar.inventory);
-													if (newChar.items.length > newChar.inventory) {
-														newChar.items = newChar.items.slice(0, newChar.inventory);
-													} else if (newChar.items.length < newChar.inventory) {
-														newChar.items = [
-															...newChar.items,
-															...Array(newChar.inventory - newChar.items.length).fill('')
-														];
-													}
-												}
-												newChar.feats = newChar.feats.filter((f) => f !== featName);
-												warbandStore.updateCurrentCharacter(newChar);
-											}}
+											on:click={() => removeFeat(feat)}
 											aria-label="Remove feat"
 										>
 											×
@@ -797,21 +694,7 @@
 										<button
 											type="button"
 											class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-400 text-xl font-bold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
-											on:click={() => {
-												const newChar = { ...currentCharacter };
-												const flawName = flaw;
-												const flawObj = flaws.find((f) => f.name === flawName);
-												if (flawObj?.statModifiers?.extraInventorySlots) {
-													const newInventory =
-														newChar.inventory - flawObj.statModifiers.extraInventorySlots;
-													newChar.inventory = Math.max(2, newInventory);
-													if (newChar.items.length > newInventory) {
-														newChar.items = newChar.items.slice(0, newInventory);
-													}
-												}
-												newChar.flaws = newChar.flaws.filter((f) => f !== flawName);
-												warbandStore.updateCurrentCharacter(newChar);
-											}}
+											on:click={() => removeFlaw(flaw)}
 											aria-label="Remove flaw"
 										>
 											×
@@ -854,21 +737,7 @@
 										<button
 											type="button"
 											class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-400 text-xl font-bold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
-											on:click={() => {
-												const newChar = { ...currentCharacter };
-												const injuryName = injury;
-												const injuryObj = injuries.find((i) => i.name === injuryName);
-												if (injuryObj?.statModifiers?.extraInventorySlots) {
-													const newInventory =
-														newChar.inventory - injuryObj.statModifiers.extraInventorySlots;
-													newChar.inventory = Math.max(2, newInventory);
-													if (newChar.items.length > newInventory) {
-														newChar.items = newChar.items.slice(0, newInventory);
-													}
-												}
-												newChar.injuries = newChar.injuries.filter((i) => i !== injuryName);
-												warbandStore.updateCurrentCharacter(newChar);
-											}}
+											on:click={() => removeInjuryFromEditor(injury)}
 											aria-label="Remove injury"
 										>
 											×

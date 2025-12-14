@@ -20,7 +20,11 @@ import {
 	applySpellcasterChange,
 	removeItemWithOptionalRefund,
 	updateStatAndInventory,
-	applyModifier
+	applyModifier,
+	updateItemSelection,
+	removeItem,
+	removeModifier,
+	selectScroll
 } from '$domain/services/characterEditorService';
 import { createWarbandApplicationService } from '$domain/application';
 import { firestoreWarbandRepository } from '$infrastructure/firebase/firestoreWarbandRepository';
@@ -35,16 +39,6 @@ type WarbandStore = {
 };
 
 const createWarbandStore = () => {
-	const cloneCharacter = (character: Character): Character => ({
-		...character,
-		items: [...character.items],
-		feats: [...character.feats],
-		flaws: [...character.flaws],
-		injuries: [...character.injuries],
-		pickedUpItems: [...(character.pickedUpItems || [])],
-		ammoTrackers: character.ammoTrackers.map((tracker) => ({ ...tracker }))
-	});
-
 	const initialState: WarbandStore = {
 		data: {
 			warbandName: '',
@@ -61,11 +55,6 @@ const createWarbandStore = () => {
 	};
 
 	const { subscribe, set, update } = writable<WarbandStore>(initialState);
-
-	const cloneWarbandData = (data: WarbandData): WarbandData => ({
-		...data,
-		characters: data.characters.map(cloneCharacter)
-	});
 
 	const persistWarband = async (newData: Partial<WarbandData>) => {
 		const store = get({ subscribe });
@@ -271,12 +260,36 @@ const createWarbandStore = () => {
 			return result;
 		},
 
-		removeItemWithRefund: (itemName: string, originalItems: string[]) => {
+		setItemForCurrentCharacter: (slotIndex: number, itemName: string) =>
+			update((state) => ({
+				...state,
+				currentCharacter: updateItemSelection(state.currentCharacter, slotIndex, itemName, items)
+			})),
+
+		removeItemFromCurrent: (slotIndex: number) =>
+			update((state) => {
+				const itemName = state.currentCharacter.items[slotIndex];
+				if (!itemName) return state;
+
+				return {
+					...state,
+					currentCharacter: removeItem(state.currentCharacter, itemName, slotIndex, items)
+				};
+			}),
+
+		selectScroll: (scrollType: 'clean' | 'unclean', scrollName: string | undefined) =>
+			update((state) => ({
+				...state,
+				currentCharacter: selectScroll(state.currentCharacter, scrollType, scrollName)
+			})),
+
+		removeItemWithRefund: (itemName: string, originalItems: string[], slotIndex?: number) => {
 			const store = get({ subscribe });
 			const { updatedCharacter, goldRefund } = removeItemWithOptionalRefund(
 				store.currentCharacter,
 				itemName,
 				originalItems,
+				slotIndex,
 				items
 			);
 
@@ -306,6 +319,12 @@ const createWarbandStore = () => {
 				currentCharacter: applyModifier(state.currentCharacter, { name, type }, items)
 			})),
 
+		removeModifier: (name: string, type: 'feat' | 'flaw' | 'injury') =>
+			update((state) => ({
+				...state,
+				currentCharacter: removeModifier(state.currentCharacter, { name, type })
+			})),
+
 		deleteCharacter: async (index: number) => {
 			const store = get({ subscribe });
 			const characterToDelete = store.data.characters[index];
@@ -333,14 +352,7 @@ const createWarbandStore = () => {
 			const character = store.data.characters[index];
 			if (!character) return;
 
-			const characterCopy = {
-				...character,
-				items: [...character.items],
-				feats: [...character.feats],
-				flaws: [...character.flaws],
-				pickedUpItems: [...(character.pickedUpItems || [])],
-				ammoTrackers: character.ammoTrackers.map((tracker) => ({ ...tracker }))
-			};
+			const characterCopy = cloneCharacter(character);
 
 			const originalGold = calculateCharacterCost(character, items);
 
