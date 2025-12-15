@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import { undoStore } from '$lib';
 import type { Character, WarbandData } from '$lib/types';
-import type { User } from 'firebase/auth';
-import { createWarbandApplicationService } from '$domain/application';
 import type { WarbandRepository } from '$domain/ports';
 import { firestoreWarbandRepository } from '$infrastructure/firebase';
 import { saveToFirestore } from '$infrastructure/firebase/firebaseServices';
@@ -55,11 +53,6 @@ const mockAction: UndoAction = {
 };
 
 describe('undoStore', () => {
-	const mockUser: User = {
-		uid: 'test-user-123',
-		email: 'test@example.com',
-		displayName: 'Test User'
-	} as User;
 	const mockRepo: WarbandRepository = {
 		save: vi.fn(),
 		load: vi.fn(),
