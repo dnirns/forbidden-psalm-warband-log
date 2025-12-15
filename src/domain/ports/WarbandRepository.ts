@@ -6,3 +6,5 @@ export interface WarbandRepository {
 	load(userId: string): Promise<WarbandData | null>;
 	subscribe(userId: string, callback: (data: WarbandData) => void): Promise<Unsubscribe>;
 }
+
+export const __warbandRepositoryRuntime = true;

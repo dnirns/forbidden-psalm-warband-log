@@ -67,3 +67,5 @@ export type Item = {
 	extraInventorySlots?: number;
 	type?: 'clean-scroll' | 'unclean-scroll';
 };
+
+export const __modelsRuntime = true;

@@ -25,7 +25,7 @@ const ensureContext = (context?: Partial<CharacterMutationContext>): CharacterMu
 
 export const cloneCharacter = (character: Character): Character => ({
 	...character,
-	items: [...character.items],
+	items: [...(character.items || [])],
 	feats: [...character.feats],
 	flaws: [...character.flaws],
 	injuries: [...character.injuries],
@@ -72,14 +72,14 @@ export const pickUpItem = (
 	itemName: string,
 	context?: Partial<CharacterMutationContext>
 ): { character: Character; error?: string } => {
-	const { items, scrolls } = ensureContext(context);
-	const next = cloneCharacter(character);
-
-	if (!next.items) {
-		next.items = Array(next.inventory).fill('');
-	} else if (next.items.length < next.inventory) {
-		next.items = [...next.items, ...Array(next.inventory - next.items.length).fill('')];
-	}
+		const { items, scrolls } = ensureContext(context);
+		const next = cloneCharacter(character);
+	
+		if (!next.items || next.items.length === 0) {
+			next.items = Array(next.inventory).fill('');
+		} else if (next.items.length < next.inventory) {
+			next.items = [...next.items, ...Array(next.inventory - next.items.length).fill('')];
+		}
 
 	const isCleanScroll = scrolls.cleanScrolls.some((scroll) => scroll.name === itemName);
 	const isUncleanScroll = scrolls.uncleanScrolls.some((scroll) => scroll.name === itemName);

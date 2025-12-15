@@ -6,3 +6,5 @@ export interface AuthPort {
 	signOut(): Promise<void>;
 	getCurrentUser(): User | null;
 }
+
+export const __authPortRuntime = true;
