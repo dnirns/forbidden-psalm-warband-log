@@ -17,6 +17,7 @@ export default defineConfig({
 				'src/tests/setup.ts',
 				'**/*.d.ts',
 				'**/*.config.*',
+				'**/index.{ts,js}',
 				'**/mockData.ts',
 				'dist/',
 				'.svelte-kit/'
