@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { get } from 'svelte/store';
+import { get, type Readable } from 'svelte/store';
 
 vi.mock('$app/environment', () => ({ browser: true }));
 
@@ -21,6 +21,10 @@ class MockAudio {
 
 vi.stubGlobal('Audio', MockAudio as unknown as typeof Audio);
 
+// Add typed helper to avoid `any`
+type AudioMap = Map<string, MockAudio>;
+const getAudioMap = (store: unknown) => get(store as Readable<AudioMap>);
+
 describe('audioStore', () => {
 	const loadStore = async () => (await import('./audioStore')).audioStore;
 
@@ -35,7 +39,7 @@ describe('audioStore', () => {
 		audioStore.init();
 		audioStore.init();
 
-		const map = get(audioStore as any);
+		const map = getAudioMap(audioStore);
 		expect(map.size).toBeGreaterThan(0);
 		expect(audioConstructor).toHaveBeenCalledTimes(map.size);
 	});
@@ -46,7 +50,7 @@ describe('audioStore', () => {
 
 		audioStore.play('coin');
 
-		const audio = get(audioStore as any).get('coin') as MockAudio;
+		const audio = getAudioMap(audioStore).get('coin') as MockAudio;
 		expect(audio.pause).toHaveBeenCalledTimes(1);
 		expect(audio.currentTime).toBe(0);
 		expect(audio.play).toHaveBeenCalledTimes(1);
@@ -55,7 +59,7 @@ describe('audioStore', () => {
 	it('logs errors when playback fails', async () => {
 		const audioStore = await loadStore();
 		audioStore.init();
-		const failingAudio = get(audioStore as any).get('coin') as MockAudio;
+		const failingAudio = getAudioMap(audioStore).get('coin') as MockAudio;
 		failingAudio.play = vi.fn(() => Promise.reject(new Error('fail')));
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

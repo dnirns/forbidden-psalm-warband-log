@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Character, Item } from '$lib/types';
+	import type { Character, Item } from '$lib/types';
 	import { feats } from '$lib/data/feats';
 	import { flaws } from '$lib/data/flaws';
 	import {
@@ -22,11 +22,11 @@ import type { Character, Item } from '$lib/types';
 	import DeleteCharacterModal from '../modals/DeleteCharacterModal.svelte';
 	import { warbandStore } from '$lib/stores/warbandStore';
 
-export let char: Character;
-export let i: number;
-export let editCharacter: (index: number) => void;
-export let deleteCharacter: (index: number) => void;
-export let items: Item[];
+	export let char: Character;
+	export let i: number;
+	export let editCharacter: (index: number) => void;
+	export let deleteCharacter: (index: number) => void;
+	export let items: Item[];
 
 	let showPickUpModal = false;
 	let showInjuryModal = false;
